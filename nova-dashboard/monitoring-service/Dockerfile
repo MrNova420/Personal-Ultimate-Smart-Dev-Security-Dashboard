@@ -51,7 +51,7 @@ EXPOSE 9090
 ENTRYPOINT ["/monitoring-service"]
 
 # Alternative production stage with minimal alpine base for health checks
-FROM alpine:3.18 AS production-with-healthcheck
+FROM alpine:3.22 AS production-with-healthcheck
 
 # Security: Install security updates and minimal packages
 RUN apk update && apk upgrade && \
