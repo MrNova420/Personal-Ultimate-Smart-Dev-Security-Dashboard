@@ -14,7 +14,7 @@ async-std = "1.12"
 futures = "0.3"
 
 # WebSocket & Networking
-tokio-tungstenite = "0.18"
+tokio-tungstenite = "0.28"
 tungstenite = "0.18"
 warp = "0.3"
 hyper = { version = "0.14", features = ["full"] }
