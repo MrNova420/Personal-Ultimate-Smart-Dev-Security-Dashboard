@@ -4,6 +4,7 @@ import terminalRoutes from './terminal';
 import securityRoutes from './security';
 import monitoringRoutes from './monitoring';
 import developmentRoutes from './development';
+import cryptoRoutes from './crypto';
 
 /**
  * NovaShield API Routes
@@ -22,6 +23,7 @@ router.get('/', (req, res) => {
     description: 'Enterprise-grade security and development platform backend API',
     endpoints: {
       auth: '/api/auth',
+      crypto: '/api/crypto',
       terminal: '/api/terminal',
       security: '/api/security',
       monitoring: '/api/monitoring',
@@ -30,12 +32,14 @@ router.get('/', (req, res) => {
     documentation: '/api/docs',
     health: '/health',
     status: 'operational',
+    quantumSafe: true,
     timestamp: new Date().toISOString(),
   });
 });
 
 // Mount route modules
 router.use('/auth', authRoutes);
+router.use('/crypto', cryptoRoutes);
 router.use('/terminal', terminalRoutes);
 router.use('/security', securityRoutes);
 router.use('/monitoring', monitoringRoutes);

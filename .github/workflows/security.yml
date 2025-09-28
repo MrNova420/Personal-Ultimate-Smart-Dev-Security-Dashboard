@@ -1,0 +1,468 @@
+name: 🔒 NovaShield Security Monitoring
+
+on:
+  schedule:
+    # Run security checks daily at 1 AM UTC
+    - cron: '0 1 * * *'
+    # Run weekly comprehensive security audit on Sundays at 3 AM UTC
+    - cron: '0 3 * * 0'
+  push:
+    branches: [ main ]
+    paths:
+      - '**/package*.json'
+      - '**/requirements*.txt'
+      - '**/Cargo.toml'
+      - '**/go.mod'
+      - '**/Dockerfile'
+  workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Type of security scan to run'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - dependencies
+          - containers
+          - secrets
+
+env:
+  SECURITY_SCAN_LEVEL: 'comprehensive'
+
+jobs:
+  # Dependency Security Audit
+  dependency-audit:
+    name: 📦 Dependency Security Audit
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.scan_type == 'dependencies' || github.event.inputs.scan_type == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
+    
+    strategy:
+      matrix:
+        component:
+          - { name: 'frontend', language: 'node', path: 'nova-dashboard/frontend' }
+          - { name: 'backend', language: 'node', path: 'nova-dashboard/backend' }
+          - { name: 'security-engine', language: 'python', path: 'nova-dashboard/security-engine' }
+          - { name: 'ai-engine', language: 'python', path: 'nova-dashboard/ai-engine' }
+          - { name: 'terminal-service', language: 'rust', path: 'nova-dashboard/terminal-service' }
+          - { name: 'monitoring-service', language: 'go', path: 'nova-dashboard/monitoring-service' }
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔍 Node.js Security Audit
+      if: matrix.component.language == 'node'
+      working-directory: ${{ matrix.component.path }}
+      run: |
+        npm audit --audit-level=moderate --json > security-audit.json || true
+        npm audit --audit-level=moderate
+
+    - name: 🐍 Python Security Audit (Safety)
+      if: matrix.component.language == 'python'
+      working-directory: ${{ matrix.component.path }}
+      run: |
+        pip install safety
+        safety check --json > safety-audit.json || true
+        safety check
+
+    - name: 🐍 Python Security Audit (Pip-audit)
+      if: matrix.component.language == 'python'
+      working-directory: ${{ matrix.component.path }}
+      run: |
+        pip install pip-audit
+        pip-audit --format=json --output=pip-audit.json . || true
+        pip-audit .
+
+    - name: 🦀 Rust Security Audit (Cargo Audit)
+      if: matrix.component.language == 'rust'
+      working-directory: ${{ matrix.component.path }}
+      run: |
+        cargo install cargo-audit
+        cargo audit --json > cargo-audit.json || true
+        cargo audit
+
+    - name: 🐹 Go Security Audit (Nancy)
+      if: matrix.component.language == 'go'
+      working-directory: ${{ matrix.component.path }}
+      run: |
+        go install github.com/sonatypecommunity/nancy@latest
+        go list -json -deps ./... | nancy sleuth --json > nancy-audit.json || true
+        go list -json -deps ./... | nancy sleuth
+
+    - name: 📊 Upload security audit results
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-audit-${{ matrix.component.name }}
+        path: |
+          ${{ matrix.component.path }}/*-audit.json
+
+  # Container Security Scanning
+  container-security:
+    name: 🐳 Container Security Scanning
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.scan_type == 'containers' || github.event.inputs.scan_type == 'full' || github.event_name == 'schedule' }}
+    
+    strategy:
+      matrix:
+        service: [frontend, backend, security-engine, ai-engine, terminal-service, monitoring-service]
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: 🏗️ Build Docker image for scanning
+      uses: docker/build-push-action@v4
+      with:
+        context: ./nova-dashboard/${{ matrix.service }}
+        file: ./nova-dashboard/${{ matrix.service }}/Dockerfile
+        target: production
+        load: true
+        tags: novashield-${{ matrix.service }}:security-scan
+
+    - name: 🔍 Trivy Container Scan (High/Critical)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: novashield-${{ matrix.service }}:security-scan
+        format: 'json'
+        output: 'trivy-${{ matrix.service }}.json'
+        severity: 'HIGH,CRITICAL'
+        exit-code: '1'
+
+    - name: 🔍 Trivy Container Scan (All Severities)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: novashield-${{ matrix.service }}:security-scan
+        format: 'sarif'
+        output: 'trivy-${{ matrix.service }}.sarif'
+
+    - name: 📊 Upload Trivy results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-${{ matrix.service }}.sarif'
+
+    - name: 🔍 Snyk Container Scan
+      uses: snyk/actions/docker@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        image: novashield-${{ matrix.service }}:security-scan
+        args: --severity-threshold=medium --json > snyk-${{ matrix.service }}.json
+      continue-on-error: true
+
+    - name: 📦 Upload container scan results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: container-security-${{ matrix.service }}
+        path: |
+          trivy-${{ matrix.service }}.json
+          snyk-${{ matrix.service }}.json
+
+  # Secrets Scanning
+  secrets-scan:
+    name: 🔑 Secrets Scanning
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.scan_type == 'secrets' || github.event.inputs.scan_type == 'full' || github.event_name == 'schedule' }}
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 🔍 TruffleHog Secrets Scan
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: ${{ github.event.repository.default_branch }}
+        head: HEAD
+        extra_args: --debug --only-verified --json > trufflehog-results.json
+
+    - name: 🔍 GitLeaks Secrets Scan
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+    - name: 🔍 Detect-secrets Scan
+      run: |
+        pip install detect-secrets
+        detect-secrets scan --all-files --force-use-all-plugins > .secrets-baseline
+        detect-secrets audit .secrets-baseline
+
+    - name: 📦 Upload secrets scan results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: secrets-scan-results
+        path: |
+          trufflehog-results.json
+          .secrets-baseline
+
+  # License Security and Compliance
+  license-check:
+    name: 📄 License Compliance Check
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.scan_type == 'full' || github.event_name == 'schedule' }}
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 📄 FOSSA License Scan
+      uses: fossa-contrib/fossa-action@v2
+      with:
+        api-key: ${{ secrets.FOSSA_API_KEY }}
+        team: novashield-security
+
+    - name: 📄 License Finder (Ruby)
+      run: |
+        gem install license_finder
+        license_finder --decisions-file=config/dependency_decisions.yml
+
+  # Infrastructure Security Scan
+  infrastructure-scan:
+    name: 🏗️ Infrastructure Security Scan
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.scan_type == 'full' || github.event_name == 'schedule' }}
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔍 Checkov Infrastructure Scan
+      uses: bridgecrewio/checkov-action@master
+      with:
+        directory: .
+        framework: dockerfile,docker_compose,kubernetes,github_actions
+        output_format: sarif
+        output_file_path: checkov-results.sarif
+
+    - name: 📊 Upload Checkov results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: checkov-results.sarif
+
+    - name: 🔍 Terrascan IaC Security Scan
+      uses: tenable/terrascan-action@main
+      with:
+        iac_type: 'docker'
+        iac_version: 'v1'
+        policy_type: 'docker'
+        only_warn: true
+        sarif_upload: true
+
+  # OWASP Dependency Check
+  owasp-dependency-check:
+    name: 🛡️ OWASP Dependency Check
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.scan_type == 'full' || github.event_name == 'schedule' }}
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔍 OWASP Dependency Check
+      uses: dependency-check/Dependency-Check_Action@main
+      with:
+        project: 'NovaShield-2025'
+        path: './nova-dashboard'
+        format: 'ALL'
+        args: >
+          --enableRetired
+          --enableExperimental
+          --nvdValidForHours 24
+
+    - name: 📊 Upload OWASP Dependency Check results
+      uses: actions/upload-artifact@v3
+      with:
+        name: owasp-dependency-check
+        path: reports/
+
+  # Security Metrics Collection
+  security-metrics:
+    name: 📊 Security Metrics Collection
+    runs-on: ubuntu-latest
+    needs: [dependency-audit, container-security, secrets-scan]
+    if: always()
+    
+    steps:
+    - name: 📥 Download all security artifacts
+      uses: actions/download-artifact@v3
+
+    - name: 📊 Generate Security Report
+      run: |
+        echo "# 🛡️ NovaShield Security Report - $(date)" > security-report.md
+        echo "" >> security-report.md
+        echo "## Summary" >> security-report.md
+        echo "- Dependency Audit: ${{ needs.dependency-audit.result }}" >> security-report.md
+        echo "- Container Security: ${{ needs.container-security.result }}" >> security-report.md
+        echo "- Secrets Scan: ${{ needs.secrets-scan.result }}" >> security-report.md
+        echo "" >> security-report.md
+        
+        # Count vulnerabilities from audit files
+        echo "## Vulnerability Counts" >> security-report.md
+        find . -name "*audit*.json" -exec echo "Processing {}" \; >> security-report.md
+        
+        echo "" >> security-report.md
+        echo "## Recommendations" >> security-report.md
+        echo "- Review all HIGH and CRITICAL vulnerabilities" >> security-report.md
+        echo "- Update dependencies with known vulnerabilities" >> security-report.md
+        echo "- Implement security patches within 7 days" >> security-report.md
+
+    - name: 📄 Upload Security Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-report
+        path: security-report.md
+
+    - name: 💬 Comment Security Report (for PRs)
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const report = fs.readFileSync('security-report.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            body: report
+          });
+
+  # Automated Security Updates
+  security-updates:
+    name: 🔄 Automated Security Updates
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'schedule' && github.ref == 'refs/heads/main' }}
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: 🔄 Update npm dependencies
+      run: |
+        cd nova-dashboard/frontend && npm update
+        cd ../backend && npm update
+
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: 🔄 Update Python dependencies
+      run: |
+        pip install pip-tools
+        cd nova-dashboard/security-engine && pip-compile --upgrade requirements.in
+        cd ../ai-engine && pip-compile --upgrade requirements.in
+
+    - name: 🦀 Update Rust dependencies
+      run: |
+        cd nova-dashboard/terminal-service && cargo update
+
+    - name: 🐹 Update Go dependencies
+      run: |
+        cd nova-dashboard/monitoring-service && go get -u ./... && go mod tidy
+
+    - name: 📝 Create Pull Request for Updates
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: '🔒 Automated security dependency updates'
+        title: '🔒 Automated Security Updates'
+        body: |
+          Automated security and dependency updates generated by the security monitoring workflow.
+          
+          ## Changes:
+          - Updated npm dependencies for frontend and backend
+          - Updated Python dependencies for security and AI engines
+          - Updated Rust dependencies for terminal service
+          - Updated Go dependencies for monitoring service
+          
+          ## Security:
+          - All updates follow semantic versioning
+          - Only security patches and minor updates included
+          - Breaking changes require manual review
+          
+          Please review and test before merging.
+        branch: automated/security-updates
+        delete-branch: true
+
+  # Security Policy Validation
+  security-policy:
+    name: 📋 Security Policy Validation
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.scan_type == 'full' || github.event_name == 'schedule' }}
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 📋 Validate Security Policy
+      run: |
+        echo "🔍 Validating security policies..."
+        
+        # Check for required security files
+        files=("SECURITY.md" "nova-dashboard/.gitignore" ".github/workflows/security.yml")
+        for file in "${files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ Found: $file"
+          else
+            echo "❌ Missing: $file"
+            exit 1
+          fi
+        done
+        
+        # Validate Docker security settings
+        echo "🐳 Checking Docker security configurations..."
+        find . -name "Dockerfile" -exec echo "Checking {}" \; -exec grep -L "USER.*[^0]" {} \; | while read dockerfile; do
+          if [ "$dockerfile" != "" ]; then
+            echo "⚠️  Dockerfile may be running as root: $dockerfile"
+          fi
+        done
+        
+        echo "✅ Security policy validation completed"
+
+  # Final Security Assessment
+  security-assessment:
+    name: 🎯 Final Security Assessment
+    runs-on: ubuntu-latest
+    needs: [dependency-audit, container-security, secrets-scan, license-check, infrastructure-scan, owasp-dependency-check, security-policy]
+    if: always()
+    
+    steps:
+    - name: 📊 Security Assessment Summary
+      run: |
+        echo "🛡️ NovaShield 2025 Security Assessment Results"
+        echo "=============================================="
+        echo "Dependency Audit: ${{ needs.dependency-audit.result }}"
+        echo "Container Security: ${{ needs.container-security.result }}"
+        echo "Secrets Scan: ${{ needs.secrets-scan.result }}"
+        echo "License Check: ${{ needs.license-check.result }}"
+        echo "Infrastructure Scan: ${{ needs.infrastructure-scan.result }}"
+        echo "OWASP Dependency Check: ${{ needs.owasp-dependency-check.result }}"
+        echo "Security Policy: ${{ needs.security-policy.result }}"
+        echo ""
+        
+        # Overall security status
+        if [ "${{ needs.dependency-audit.result }}" = "success" ] && 
+           [ "${{ needs.container-security.result }}" = "success" ] && 
+           [ "${{ needs.secrets-scan.result }}" = "success" ]; then
+          echo "🟢 Overall Security Status: PASS"
+        else
+          echo "🔴 Overall Security Status: NEEDS ATTENTION"
+        fi

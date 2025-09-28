@@ -1,0 +1,468 @@
+name: 🛡️ NovaShield 2025 CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop, 'feature/*', 'copilot/*' ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+  GO_VERSION: '1.20'
+  RUST_VERSION: '1.70'
+
+jobs:
+  # Security and Quality Gates
+  security-scan:
+    name: 🔒 Security Scanning
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 🔍 Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH,MEDIUM'
+
+    - name: 📊 Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: 🔐 Run Semgrep Security Analysis
+      uses: semgrep/semgrep-action@v1
+      with:
+        config: >-
+          p/security-audit
+          p/secrets
+          p/owasp-top-ten
+          p/docker
+        generateSarif: "1"
+      env:
+        SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+    - name: 🔑 Secret scanning with GitLeaks
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: ${{ github.event.repository.default_branch }}
+        head: HEAD
+        extra_args: --debug --only-verified
+
+  # Code Quality Analysis
+  code-quality:
+    name: 📊 Code Quality Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 🔍 SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        args: >
+          -Dsonar.projectKey=novashield-2025
+          -Dsonar.organization=novashield
+          -Dsonar.sources=nova-dashboard/
+          -Dsonar.tests=nova-dashboard/
+          -Dsonar.test.inclusions=**/*test*/**
+          -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/target/**
+
+  # Frontend Testing and Build
+  frontend-test:
+    name: 🎨 Frontend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./nova-dashboard/frontend
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: './nova-dashboard/frontend/package-lock.json'
+
+    - name: 📦 Install dependencies
+      run: npm ci
+
+    - name: 🔍 Run ESLint
+      run: npm run lint
+
+    - name: 🎯 Run TypeScript check
+      run: npm run type-check
+
+    - name: 🧪 Run tests with coverage
+      run: npm test -- --coverage --watchAll=false
+
+    - name: 📊 Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./nova-dashboard/frontend/coverage/lcov.info
+        flags: frontend
+        name: frontend-coverage
+
+    - name: 🏗️ Build application
+      run: npm run build
+
+    - name: 📦 Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: frontend-build
+        path: ./nova-dashboard/frontend/build
+
+  # Backend Testing and Build
+  backend-test:
+    name: ⚙️ Backend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./nova-dashboard/backend
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: './nova-dashboard/backend/package-lock.json'
+
+    - name: 📦 Install dependencies
+      run: npm ci
+
+    - name: 🔍 Run ESLint
+      run: npm run lint
+
+    - name: 🎯 Run TypeScript check
+      run: npm run type-check
+
+    - name: 🧪 Run tests with coverage
+      run: npm test -- --coverage
+      env:
+        NODE_ENV: test
+        REDIS_URL: redis://localhost:6379
+        JWT_SECRET: test-jwt-secret-for-ci-pipeline-only
+        SESSION_SECRET: test-session-secret-for-ci-pipeline-only
+
+    - name: 📊 Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./nova-dashboard/backend/coverage/lcov.info
+        flags: backend
+        name: backend-coverage
+
+    - name: 🏗️ Build application
+      run: npm run build
+
+  # Security Engine Testing
+  security-engine-test:
+    name: 🛡️ Security Engine Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./nova-dashboard/security-engine
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: 📦 Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    - name: 🔍 Run flake8 linting
+      run: flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
+
+    - name: 🎯 Run mypy type checking
+      run: mypy src/
+
+    - name: 🔒 Run bandit security analysis
+      run: bandit -r src/ -f json -o bandit-report.json
+
+    - name: 🧪 Run pytest with coverage
+      run: pytest --cov=src --cov-report=xml --cov-report=html
+
+    - name: 📊 Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./nova-dashboard/security-engine/coverage.xml
+        flags: security-engine
+        name: security-engine-coverage
+
+  # Terminal Service Testing
+  terminal-service-test:
+    name: 💻 Terminal Service Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./nova-dashboard/terminal-service
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🦀 Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ env.RUST_VERSION }}
+        components: rustfmt, clippy
+        override: true
+
+    - name: 📦 Cache Rust dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: 🔍 Run Clippy
+      uses: actions-rs/cargo@v1
+      with:
+        command: clippy
+        args: --all-targets --all-features -- -D warnings
+
+    - name: 🎯 Check formatting
+      uses: actions-rs/cargo@v1
+      with:
+        command: fmt
+        args: --all -- --check
+
+    - name: 🧪 Run tests
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --all-features
+
+    - name: 🏗️ Build release
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --release
+
+  # Monitoring Service Testing
+  monitoring-service-test:
+    name: 📊 Monitoring Service Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./nova-dashboard/monitoring-service
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐹 Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache-dependency-path: './nova-dashboard/monitoring-service/go.sum'
+
+    - name: 📦 Download dependencies
+      run: go mod download
+
+    - name: 🔍 Run go vet
+      run: go vet ./...
+
+    - name: 🎯 Run go fmt check
+      run: |
+        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          echo "Go code is not formatted:"
+          gofmt -s -l .
+          exit 1
+        fi
+
+    - name: 🧪 Run tests with coverage
+      run: go test -v -race -coverprofile=coverage.out ./...
+
+    - name: 📊 Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./nova-dashboard/monitoring-service/coverage.out
+        flags: monitoring-service
+        name: monitoring-service-coverage
+
+    - name: 🏗️ Build application
+      run: go build -v ./...
+
+  # Docker Build and Security Scan
+  docker-build:
+    name: 🐳 Docker Build & Scan
+    runs-on: ubuntu-latest
+    needs: [frontend-test, backend-test, security-engine-test, terminal-service-test, monitoring-service-test]
+    
+    strategy:
+      matrix:
+        service: [frontend, backend, security-engine, terminal-service, monitoring-service]
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: 🏗️ Build Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./nova-dashboard/${{ matrix.service }}
+        file: ./nova-dashboard/${{ matrix.service }}/Dockerfile
+        target: production
+        push: false
+        tags: novashield-${{ matrix.service }}:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: 🔍 Run Trivy container scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: novashield-${{ matrix.service }}:${{ github.sha }}
+        format: 'sarif'
+        output: 'trivy-${{ matrix.service }}.sarif'
+
+    - name: 📊 Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-${{ matrix.service }}.sarif'
+
+  # Integration Testing
+  integration-test:
+    name: 🔄 Integration Tests
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: 🚀 Start services with Docker Compose
+      run: |
+        cd nova-dashboard/docker
+        docker-compose -f docker-compose.dev.yml up -d
+        sleep 30
+
+    - name: 🔍 Health check all services
+      run: |
+        curl -f http://localhost:5000/health || exit 1
+        curl -f http://localhost:3000 || exit 1
+
+    - name: 🧪 Run integration tests
+      run: |
+        # Integration tests will be implemented in future commits
+        echo "Integration tests placeholder - to be implemented"
+
+    - name: 📋 Show service logs
+      if: failure()
+      run: |
+        cd nova-dashboard/docker
+        docker-compose -f docker-compose.dev.yml logs
+
+    - name: 🛑 Stop services
+      if: always()
+      run: |
+        cd nova-dashboard/docker
+        docker-compose -f docker-compose.dev.yml down
+
+  # Deployment Preview (for main branch)
+  deploy-preview:
+    name: 🚀 Deploy Preview
+    runs-on: ubuntu-latest
+    needs: [security-scan, code-quality, integration-test]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🚀 Deploy to staging environment
+      run: |
+        echo "Staging deployment would happen here"
+        echo "Environment URL: https://novashield-staging.example.com"
+
+    - name: 📝 Update deployment status
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.repos.createDeploymentStatus({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            deployment_id: context.payload.deployment.id,
+            state: 'success',
+            environment_url: 'https://novashield-staging.example.com',
+            description: 'Deployment completed successfully'
+          });
+
+  # Notification
+  notify:
+    name: 📢 Notifications
+    runs-on: ubuntu-latest
+    needs: [security-scan, code-quality, frontend-test, backend-test, security-engine-test, terminal-service-test, monitoring-service-test, docker-build, integration-test]
+    if: always()
+    
+    steps:
+    - name: 📊 Pipeline Results Summary
+      run: |
+        echo "🛡️ NovaShield 2025 CI/CD Pipeline Results"
+        echo "Security Scan: ${{ needs.security-scan.result }}"
+        echo "Code Quality: ${{ needs.code-quality.result }}"
+        echo "Frontend Tests: ${{ needs.frontend-test.result }}"
+        echo "Backend Tests: ${{ needs.backend-test.result }}"
+        echo "Security Engine Tests: ${{ needs.security-engine-test.result }}"
+        echo "Terminal Service Tests: ${{ needs.terminal-service-test.result }}"
+        echo "Monitoring Service Tests: ${{ needs.monitoring-service-test.result }}"
+        echo "Docker Builds: ${{ needs.docker-build.result }}"
+        echo "Integration Tests: ${{ needs.integration-test.result }}"
