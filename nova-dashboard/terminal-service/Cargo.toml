@@ -46,7 +46,7 @@ log = "0.4"
 env_logger = "0.10"
 
 # Configuration
-config = "0.13"
+config = "0.15"
 clap = { version = "4.1", features = ["derive"] }
 
 # Database & Storage
