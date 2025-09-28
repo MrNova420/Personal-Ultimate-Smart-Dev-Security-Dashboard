@@ -2,7 +2,7 @@
 # Rust-based terminal service with security hardening
 
 # Build stage
-FROM rust:1.70-alpine AS builder
+FROM rust:1.90-alpine AS builder
 
 # Security: Install required packages and updates
 RUN apk update && apk upgrade && \
@@ -72,7 +72,7 @@ ENTRYPOINT ["dumb-init", "--"]
 CMD ["./terminal-service"]
 
 # Development stage
-FROM rust:1.70-alpine AS development
+FROM rust:1.90-alpine AS development
 
 # Security: Install required packages and updates
 RUN apk update && apk upgrade && \
