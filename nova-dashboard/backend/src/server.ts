@@ -11,6 +11,8 @@ import { Server as SocketIOServer } from 'socket.io';
 import { errorHandler } from '@/middleware/errorHandler';
 import { logger } from '@/utils/logger';
 import { validateEnvironment } from '@/config/environment';
+import { securityMonitor } from '@/security/securityMonitor';
+import { auditLogger } from '@/security/auditLogger';
 import routes from '@/routes';
 
 // Load environment variables
@@ -39,6 +41,7 @@ class NovaShieldServer {
     this.initializeMiddleware();
     this.initializeRoutes();
     this.initializeErrorHandling();
+    this.initializeSecurityMonitoring();
     this.createServer();
   }
 
@@ -89,10 +92,66 @@ class NovaShieldServer {
     this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-    // Logging
+    // Logging with security monitoring
     this.app.use(morgan('combined', {
       stream: { write: message => logger.info(message.trim()) }
     }));
+
+    // Custom security monitoring middleware
+    this.app.use((req, res, next) => {
+      const startTime = Date.now();
+      
+      res.on('finish', async () => {
+        const responseTime = Date.now() - startTime;
+        const statusCode = res.statusCode;
+        
+        // Log security-relevant requests
+        if (req.path.startsWith('/api/auth') || 
+            req.path.startsWith('/api/security') || 
+            statusCode >= 400) {
+          
+          const eventType = req.path.startsWith('/api/auth') ? 'auth' : 'system';
+          const severity = statusCode >= 500 ? 'high' : statusCode >= 400 ? 'medium' : 'low';
+          const outcome = statusCode < 400 ? 'success' : 'failure';
+          
+          await auditLogger.logSecurityEvent(
+            eventType,
+            severity,
+            `${req.method} ${req.path}`,
+            {
+              statusCode,
+              responseTime,
+              userAgent: req.get('User-Agent'),
+              body: req.method === 'POST' ? '***REDACTED***' : undefined
+            },
+            {
+              userId: req.user?.id,
+              sessionId: req.sessionID,
+              ipAddress: req.ip,
+              userAgent: req.get('User-Agent'),
+              outcome
+            }
+          );
+          
+          // Send event to security monitor for analysis
+          securityMonitor.processEvent({
+            id: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            timestamp: new Date().toISOString(),
+            eventType,
+            severity,
+            userId: req.user?.id,
+            sessionId: req.sessionID,
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent'),
+            action: `${req.method} ${req.path}`,
+            outcome,
+            details: { statusCode, responseTime }
+          });
+        }
+      });
+      
+      next();
+    });
 
     // Health check endpoint
     this.app.get('/health', (req, res) => {
@@ -128,6 +187,92 @@ class NovaShieldServer {
    */
   private initializeErrorHandling(): void {
     this.app.use(errorHandler);
+  }
+
+  /**
+   * Initialize security monitoring and audit logging
+   */
+  private initializeSecurityMonitoring(): void {
+    // Initialize security monitoring with default alert rules
+    const defaultRules = [
+      {
+        id: 'brute_force_login',
+        name: 'Brute Force Login Detection',
+        eventType: 'auth',
+        condition: {
+          field: 'outcome',
+          operator: 'equals' as const,
+          value: 'failure'
+        },
+        threshold: {
+          count: 5,
+          timeWindow: 15 // 15 minutes
+        },
+        severity: 'high' as const,
+        actions: ['log', 'alert', 'block'] as const,
+        enabled: true
+      },
+      {
+        id: 'suspicious_login_location',
+        name: 'Suspicious Login Location',
+        eventType: 'auth',
+        condition: {
+          field: 'action',
+          operator: 'equals' as const,
+          value: 'login_success'
+        },
+        severity: 'medium' as const,
+        actions: ['log', 'alert'] as const,
+        enabled: true
+      },
+      {
+        id: 'privilege_escalation',
+        name: 'Privilege Escalation Attempt',
+        eventType: 'authorization',
+        condition: {
+          field: 'outcome',
+          operator: 'equals' as const,
+          value: 'failure'
+        },
+        threshold: {
+          count: 3,
+          timeWindow: 5 // 5 minutes
+        },
+        severity: 'critical' as const,
+        actions: ['log', 'alert', 'block'] as const,
+        enabled: true
+      }
+    ];
+
+    // Add default alert rules to security monitor
+    defaultRules.forEach(rule => securityMonitor.addAlertRule(rule));
+
+    // Set up event listeners for real-time alerts
+    securityMonitor.on('threatDetected', (threat) => {
+      logger.warn('🚨 Security threat detected', threat);
+      
+      // In a real deployment, this would trigger notifications
+      // For localhost, we log to console and audit trail
+    });
+
+    // Log security monitoring initialization
+    auditLogger.logSecurityEvent(
+      'system',
+      'medium',
+      'security_monitoring_initialized',
+      { 
+        rulesLoaded: defaultRules.length,
+        monitoringActive: true 
+      },
+      {
+        ipAddress: '127.0.0.1',
+        outcome: 'success'
+      }
+    );
+
+    logger.info('🛡️ Security monitoring system initialized', { 
+      alertRules: defaultRules.length 
+    });
   }
 
   /**

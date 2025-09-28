@@ -452,6 +452,10 @@ class SecurityMonitor extends EventEmitter {
     return Array.from(this.threats.values()).filter(t => t.status === 'active');
   }
 
+  getActiveAlerts(): ThreatDetection[] {
+    return this.getActiveThreats();
+  }
+
   async getSecurityMetrics(): Promise<SecurityMetrics> {
     const activeThreats = this.getActiveThreats();
     const totalEvents = Array.from(this.eventCounts.values()).reduce((sum, data) => sum + data.count, 0);
