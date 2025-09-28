@@ -20,7 +20,7 @@ warp = "0.3"
 hyper = { version = "0.14", features = ["full"] }
 
 # Terminal & PTY
-portable-pty = "0.8"
+portable-pty = "0.9"
 vte = "0.11"
 termios = "0.3"
 nix = "0.26"
