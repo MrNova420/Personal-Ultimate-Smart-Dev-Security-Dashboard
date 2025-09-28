@@ -33,7 +33,7 @@ COPY src/ ./src/
 RUN cargo build --release
 
 # Production stage
-FROM alpine:3.18 AS production
+FROM alpine:3.22 AS production
 
 # Security: Install security updates and required packages
 RUN apk update && apk upgrade && \
