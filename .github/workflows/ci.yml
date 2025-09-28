@@ -27,7 +27,7 @@ jobs:
     
     steps:
     - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
@@ -73,7 +73,7 @@ jobs:
     
     steps:
     - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
@@ -101,7 +101,7 @@ jobs:
     
     steps:
     - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: 🟢 Setup Node.js
       uses: actions/setup-node@v3
@@ -159,7 +159,7 @@ jobs:
     
     steps:
     - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: 🟢 Setup Node.js
       uses: actions/setup-node@v3
@@ -205,7 +205,7 @@ jobs:
     
     steps:
     - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: 🐍 Setup Python
       uses: actions/setup-python@v4
@@ -248,7 +248,7 @@ jobs:
     
     steps:
     - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: 🦀 Setup Rust
       uses: actions-rs/toolchain@v1
@@ -300,7 +300,7 @@ jobs:
     
     steps:
     - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: 🐹 Setup Go
       uses: actions/setup-go@v4
@@ -347,7 +347,7 @@ jobs:
     
     steps:
     - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: 🐳 Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
@@ -384,7 +384,7 @@ jobs:
     
     steps:
     - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: 🐳 Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
@@ -426,7 +426,7 @@ jobs:
     
     steps:
     - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: 🚀 Deploy to staging environment
       run: |
