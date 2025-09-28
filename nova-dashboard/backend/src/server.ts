@@ -14,6 +14,7 @@ import { validateEnvironment } from '@/config/environment';
 import { securityMonitor } from '@/security/securityMonitor';
 import { auditLogger } from '@/security/auditLogger';
 import { messageQueue } from '@/messaging/messageQueue';
+import { healthCheckService } from '@/services/healthCheck';
 import routes from '@/routes';
 
 // Load environment variables
@@ -44,6 +45,7 @@ class NovaShieldServer {
     this.initializeErrorHandling();
     this.initializeSecurityMonitoring();
     this.initializeMessageQueue();
+    this.initializeHealthChecks();
     this.createServer();
   }
 
@@ -435,6 +437,58 @@ class NovaShieldServer {
         outcome: 'success'
       }
     );
+  }
+
+  /**
+   * Initialize health check and service discovery system
+   */
+  private initializeHealthChecks(): void {
+    // Set up health check service event listeners
+    healthCheckService.on('statusChanged', async (event) => {
+      logger.info('🔄 Service status changed', {
+        serviceId: event.serviceId,
+        from: event.previousStatus,
+        to: event.currentStatus
+      });
+
+      // Log critical service status changes
+      if (event.currentStatus === 'unhealthy' || event.previousStatus === 'healthy') {
+        await auditLogger.logSecurityEvent(
+          'system',
+          event.currentStatus === 'unhealthy' ? 'high' : 'medium',
+          'service_status_change',
+          {
+            serviceId: event.serviceId,
+            serviceName: event.service.name,
+            previousStatus: event.previousStatus,
+            currentStatus: event.currentStatus,
+            serviceType: event.service.type
+          },
+          {
+            ipAddress: '127.0.0.1',
+            outcome: event.currentStatus === 'healthy' ? 'success' : 'failure'
+          }
+        );
+      }
+    });
+
+    healthCheckService.on('serviceRegistered', (service) => {
+      logger.info('📋 New service registered', {
+        id: service.id,
+        name: service.name,
+        type: service.type,
+        url: service.url
+      });
+    });
+
+    healthCheckService.on('serviceUnregistered', (serviceId) => {
+      logger.warn('📋 Service unregistered', { serviceId });
+    });
+
+    // Start the health check service
+    healthCheckService.start();
+
+    logger.info('🏥 Health Check and Service Discovery system initialized');
   }
 
   /**

@@ -1,0 +1,95 @@
+{
+  "healthCheck": {
+    "name": "NovaShield Health Check & Service Discovery System",
+    "version": "1.0.0",
+    "description": "Enterprise health monitoring and service discovery with comprehensive dependency tracking",
+    "features": {
+      "serviceDiscovery": true,
+      "dependencyTracking": true,
+      "performanceMonitoring": true,
+      "automaticRecovery": true,
+      "alerting": true,
+      "auditLogging": true,
+      "loadBalancerIntegration": true
+    },
+    "configuration": {
+      "defaultInterval": 30000,
+      "criticalInterval": 10000,
+      "timeout": 5000,
+      "retryAttempts": 3,
+      "retryDelay": 2000,
+      "heartbeatTimeout": 90000,
+      "degradedThreshold": 0.8,
+      "unhealthyThreshold": 0.5
+    },
+    "serviceTypes": {
+      "core": {
+        "description": "Core platform services",
+        "critical": true,
+        "checkInterval": 10000
+      },
+      "microservice": {
+        "description": "Microservice applications",
+        "critical": false,
+        "checkInterval": 30000
+      },
+      "database": {
+        "description": "Database services",
+        "critical": true,
+        "checkInterval": 15000
+      },
+      "cache": {
+        "description": "Caching services",
+        "critical": true,
+        "checkInterval": 20000
+      },
+      "external": {
+        "description": "External dependencies",
+        "critical": false,
+        "checkInterval": 60000
+      }
+    },
+    "healthChecks": {
+      "connectivity": {
+        "name": "Connectivity Check",
+        "description": "Verify service is reachable",
+        "critical": true,
+        "timeout": 5000
+      },
+      "dependencies": {
+        "name": "Dependency Check",
+        "description": "Verify all dependencies are healthy",
+        "critical": false,
+        "timeout": 3000
+      },
+      "performance": {
+        "name": "Performance Check",
+        "description": "Monitor response times and resource usage",
+        "critical": false,
+        "timeout": 2000
+      }
+    },
+    "endpoints": {
+      "systemHealth": "/api/health",
+      "servicesHealth": "/api/health/services",
+      "serviceRegistry": "/api/health/registry",
+      "readinessProbe": "/api/health/ready",
+      "livenessProbe": "/api/health/live",
+      "healthStats": "/api/health/stats"
+    },
+    "alerting": {
+      "enableEmailAlerts": false,
+      "enableSlackAlerts": false,
+      "enableWebhookAlerts": true,
+      "criticalThreshold": "unhealthy",
+      "warningThreshold": "degraded",
+      "alertCooldown": 300000
+    },
+    "monitoring": {
+      "enableMetrics": true,
+      "enableTracing": true,
+      "retentionPeriod": "7d",
+      "aggregationInterval": "1m"
+    }
+  }
+}

@@ -7,12 +7,13 @@ import developmentRoutes from './development';
 import cryptoRoutes from './crypto';
 import gatewayRoutes from './gateway';
 import messagingRoutes from './messaging';
+import healthRoutes from './health';
 
 /**
  * NovaShield API Routes
  * 
  * Central router configuration for all API endpoints
- * Implements security-first routing with API Gateway and messaging integration
+ * Implements security-first routing with comprehensive system monitoring
  */
 
 const router = Router();
@@ -25,6 +26,7 @@ router.get('/', (req, res) => {
     description: 'Enterprise-grade security and development platform backend API',
     gateway: 'Enabled with microservices routing',
     messaging: 'Enabled with inter-service communication',
+    healthChecks: 'Enabled with comprehensive service discovery',
     endpoints: {
       auth: '/api/auth',
       crypto: '/api/crypto',
@@ -33,22 +35,32 @@ router.get('/', (req, res) => {
       monitoring: '/api/monitoring',
       development: '/api/development',
       gateway: '/api/gateway',
-      messaging: '/api/messaging'
+      messaging: '/api/messaging',
+      health: '/api/health'
     },
     microservices: {
       'security-engine': '/api/gateway/security-engine',
       'terminal-service': '/api/gateway/terminal',
       'monitoring-service': '/api/gateway/monitoring'
     },
+    systemEndpoints: {
+      health: '/health',
+      ready: '/api/health/ready',
+      live: '/api/health/live',
+      services: '/api/health/services',
+      registry: '/api/health/registry'
+    },
     documentation: '/api/docs',
-    health: '/health',
     status: 'operational',
     quantumSafe: true,
     timestamp: new Date().toISOString(),
   });
 });
 
-// Mount API Gateway routes first (highest priority)
+// Mount health check routes first (critical system endpoints)
+router.use('/health', healthRoutes);
+
+// Mount API Gateway routes (highest priority for routing)
 router.use('/gateway', gatewayRoutes);
 
 // Mount message queue routes
