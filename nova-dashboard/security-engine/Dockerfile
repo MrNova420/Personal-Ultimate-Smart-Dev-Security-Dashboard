@@ -1,7 +1,7 @@
 # NovaShield 2025 Security Engine Dockerfile
 # Python-based security services with hardening
 
-FROM python:3.11-alpine AS base
+FROM python:3.13-alpine AS base
 
 # Security: Install security updates and required packages
 RUN apk update && apk upgrade && \
