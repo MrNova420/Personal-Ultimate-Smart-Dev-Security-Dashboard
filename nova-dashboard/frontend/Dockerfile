@@ -2,7 +2,7 @@
 # Multi-stage build for security and optimization
 
 # Build stage
-FROM node:18-alpine AS builder
+FROM node:24-alpine AS builder
 
 # Security: Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -71,7 +71,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 CMD ["nginx", "-g", "daemon off;"]
 
 # Development stage
-FROM node:18-alpine AS development
+FROM node:24-alpine AS development
 
 # Security: Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
