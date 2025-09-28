@@ -379,7 +379,7 @@ jobs:
         cd nova-dashboard/monitoring-service && go get -u ./... && go mod tidy
 
     - name: 📝 Create Pull Request for Updates
-      uses: peter-evans/create-pull-request@v5
+      uses: peter-evans/create-pull-request@v7
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         commit-message: '🔒 Automated security dependency updates'
