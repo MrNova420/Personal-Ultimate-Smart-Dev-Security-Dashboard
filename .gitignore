@@ -1,0 +1,111 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.staging
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Cache directories
+.cache/
+.parcel-cache/
+
+# Docker
+.docker/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+.venv/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.cert
+
+# Backup files
+*.bak
+*.backup
+
+# Archives
+*.tar
+*.tar.gz
+*.zip
+*.rar
+
+# Exclude redundant documentation files
+*BLUEPRINT*.md
+*IMPLEMENTATION*.md
+*SPECIFICATION*.md
+*GUIDE*.md
+*SYSTEM*.md
+*DESIGN*.md
+*JARVIS*.md
+*SECURITY*.md
+*MONITORING*.md
+*ADVANCED*.md
+*ULTIMATE*.md
+*COMPLETE*.md
+*MASTER*.md
+*ENHANCED*.md
+
+# But keep essential files
+!README.md
+!CONTRIBUTING.md
+!SECURITY.md
+!NOVASHIELD_2025_COMPLETE_MASTER_BLUEPRINT.md
