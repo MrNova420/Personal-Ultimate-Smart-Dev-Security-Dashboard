@@ -2,7 +2,7 @@
 # Go-based monitoring service with security hardening
 
 # Build stage
-FROM golang:1.20-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 # Security: Install required packages and updates
 RUN apk update && apk upgrade && \
@@ -90,7 +90,7 @@ ENTRYPOINT ["dumb-init", "--"]
 CMD ["./monitoring-service"]
 
 # Development stage
-FROM golang:1.20-alpine AS development
+FROM golang:1.25-alpine AS development
 
 # Security: Install required packages and updates
 RUN apk update && apk upgrade && \
