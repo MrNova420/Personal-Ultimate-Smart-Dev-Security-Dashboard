@@ -1,0 +1,379 @@
+# NovaShield 2025 Dependabot Configuration
+# Automated dependency updates with security focus
+
+version: 2
+updates:
+  # Frontend dependencies (npm)
+  - package-ecosystem: "npm"
+    directory: "/nova-dashboard/frontend"
+    schedule:
+      interval: "daily"
+      time: "02:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "novashield-security-team"
+    assignees:
+      - "novashield-security-team"
+    commit-message:
+      prefix: "🔒 security"
+      prefix-development: "🔧 deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "frontend"
+    ignore:
+      # Ignore major version updates (require manual review)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      react-ecosystem:
+        patterns:
+          - "react*"
+          - "@types/react*"
+      testing-framework:
+        patterns:
+          - "@testing-library/*"
+          - "jest*"
+          - "@types/jest*"
+      build-tools:
+        patterns:
+          - "webpack*"
+          - "babel*"
+          - "eslint*"
+          - "typescript*"
+
+  # Backend dependencies (npm)
+  - package-ecosystem: "npm"
+    directory: "/nova-dashboard/backend"
+    schedule:
+      interval: "daily"
+      time: "02:15"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "novashield-security-team"
+    assignees:
+      - "novashield-security-team"
+    commit-message:
+      prefix: "🔒 security"
+      prefix-development: "🔧 deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "backend"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      express-ecosystem:
+        patterns:
+          - "express*"
+          - "@types/express*"
+      security-middleware:
+        patterns:
+          - "helmet*"
+          - "cors*"
+          - "express-rate-limit*"
+      authentication:
+        patterns:
+          - "jsonwebtoken*"
+          - "bcryptjs*"
+          - "passport*"
+          - "speakeasy*"
+
+  # Security Engine dependencies (pip)
+  - package-ecosystem: "pip"
+    directory: "/nova-dashboard/security-engine"
+    schedule:
+      interval: "daily"
+      time: "02:30"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "novashield-security-team"
+    assignees:
+      - "novashield-security-team"
+    commit-message:
+      prefix: "🔒 security"
+      prefix-development: "🔧 deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "python"
+      - "security-engine"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      fastapi-ecosystem:
+        patterns:
+          - "fastapi*"
+          - "uvicorn*"
+          - "pydantic*"
+      security-tools:
+        patterns:
+          - "cryptography*"
+          - "pycryptodome*"
+          - "argon2*"
+          - "bcrypt*"
+      ml-frameworks:
+        patterns:
+          - "numpy*"
+          - "pandas*"
+          - "scikit-learn*"
+          - "tensorflow*"
+
+  # AI Engine dependencies (pip)
+  - package-ecosystem: "pip"
+    directory: "/nova-dashboard/ai-engine"
+    schedule:
+      interval: "daily"
+      time: "02:45"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "novashield-security-team"
+    assignees:
+      - "novashield-security-team"
+    commit-message:
+      prefix: "🔒 security"
+      prefix-development: "🔧 deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "python"
+      - "ai-engine"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # Terminal Service dependencies (cargo)
+  - package-ecosystem: "cargo"
+    directory: "/nova-dashboard/terminal-service"
+    schedule:
+      interval: "daily"
+      time: "03:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "novashield-security-team"
+    assignees:
+      - "novashield-security-team"
+    commit-message:
+      prefix: "🔒 security"
+      prefix-development: "🔧 deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "rust"
+      - "terminal-service"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      tokio-ecosystem:
+        patterns:
+          - "tokio*"
+          - "futures*"
+      security-crypto:
+        patterns:
+          - "ring*"
+          - "rustls*"
+          - "argon2*"
+      serialization:
+        patterns:
+          - "serde*"
+          - "serde_json*"
+          - "bincode*"
+
+  # Monitoring Service dependencies (go modules)
+  - package-ecosystem: "gomod"
+    directory: "/nova-dashboard/monitoring-service"
+    schedule:
+      interval: "daily"
+      time: "03:15"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "novashield-security-team"
+    assignees:
+      - "novashield-security-team"
+    commit-message:
+      prefix: "🔒 security"
+      prefix-development: "🔧 deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "go"
+      - "monitoring-service"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      gin-ecosystem:
+        patterns:
+          - "github.com/gin-gonic/*"
+      monitoring-tools:
+        patterns:
+          - "github.com/prometheus/*"
+          - "github.com/grafana/*"
+      database:
+        patterns:
+          - "gorm.io/*"
+          - "github.com/lib/pq*"
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/nova-dashboard/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "novashield-security-team"
+    assignees:
+      - "novashield-security-team"
+    commit-message:
+      prefix: "🔒 security"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "docker"
+      - "frontend"
+
+  - package-ecosystem: "docker"
+    directory: "/nova-dashboard/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:15"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "novashield-security-team"
+    assignees:
+      - "novashield-security-team"
+    commit-message:
+      prefix: "🔒 security"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "docker"
+      - "backend"
+
+  - package-ecosystem: "docker"
+    directory: "/nova-dashboard/security-engine"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:30"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "novashield-security-team"
+    assignees:
+      - "novashield-security-team"
+    commit-message:
+      prefix: "🔒 security"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "docker"
+      - "security-engine"
+
+  - package-ecosystem: "docker"
+    directory: "/nova-dashboard/ai-engine"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:45"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "novashield-security-team"
+    assignees:
+      - "novashield-security-team"
+    commit-message:
+      prefix: "🔒 security"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "docker"
+      - "ai-engine"
+
+  - package-ecosystem: "docker"
+    directory: "/nova-dashboard/terminal-service"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "novashield-security-team"
+    assignees:
+      - "novashield-security-team"
+    commit-message:
+      prefix: "🔒 security"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "docker"
+      - "terminal-service"
+
+  - package-ecosystem: "docker"
+    directory: "/nova-dashboard/monitoring-service"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:15"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "novashield-security-team"
+    assignees:
+      - "novashield-security-team"
+    commit-message:
+      prefix: "🔒 security"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "docker"
+      - "monitoring-service"
+
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "novashield-security-team"
+    assignees:
+      - "novashield-security-team"
+    commit-message:
+      prefix: "🔒 security"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+      - "github-actions"
+      - "ci-cd"
