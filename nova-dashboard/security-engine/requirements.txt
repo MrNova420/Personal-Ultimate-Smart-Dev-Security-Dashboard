@@ -17,7 +17,7 @@ bcrypt==4.0.1
 scapy==2.5.0
 python-nmap==0.7.1
 netaddr==0.8.0
-dnspython==2.3.0
+dnspython==2.7.0
 
 # Vulnerability Scanning
 bandit==1.7.5
