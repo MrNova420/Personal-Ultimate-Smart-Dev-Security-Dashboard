@@ -1,0 +1,16 @@
+import React from 'react';
+
+const Terminal: React.FC = () => {
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold text-gray-100 mb-4">Terminal</h1>
+      <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+        <p className="text-gray-400">
+          Terminal service will be implemented in Phase 4, Week 14
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default Terminal;
