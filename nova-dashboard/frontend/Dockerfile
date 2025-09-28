@@ -31,7 +31,7 @@ USER nextjs
 RUN npm run build
 
 # Production stage
-FROM nginx:1.23-alpine AS production
+FROM nginx:1.29-alpine AS production
 
 # Security: Install security updates
 RUN apk update && apk upgrade && \
