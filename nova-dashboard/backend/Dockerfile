@@ -2,7 +2,7 @@
 # Multi-stage build with security hardening
 
 # Build stage
-FROM node:18-alpine AS builder
+FROM node:24-alpine AS builder
 
 # Security: Install security updates and required packages
 RUN apk update && apk upgrade && \
@@ -35,7 +35,7 @@ USER nodeuser
 RUN npm run build
 
 # Production stage
-FROM node:18-alpine AS production
+FROM node:24-alpine AS production
 
 # Security: Install security updates
 RUN apk update && apk upgrade && \
@@ -79,7 +79,7 @@ ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/server.js"]
 
 # Development stage
-FROM node:18-alpine AS development
+FROM node:24-alpine AS development
 
 # Security: Install security updates
 RUN apk update && apk upgrade && \
