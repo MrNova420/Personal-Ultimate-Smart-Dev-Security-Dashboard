@@ -1,0 +1,76 @@
+{
+  "messageQueue": {
+    "name": "NovaShield Message Queue System",
+    "version": "1.0.0",
+    "description": "Enterprise message queue for inter-service communication",
+    "features": {
+      "pubSub": true,
+      "persistence": true,
+      "retryLogic": true,
+      "deadLetterQueue": true,
+      "auditLogging": true,
+      "priorityQueues": true
+    },
+    "configuration": {
+      "redisUrl": "redis://localhost:6379",
+      "maxRetries": 3,
+      "retryDelay": 5000,
+      "messageTimeout": 30000,
+      "deadLetterQueue": "novashield:dlq",
+      "enableAuditLogging": true
+    },
+    "queues": {
+      "system": {
+        "description": "System notifications and events",
+        "messageTypes": [
+          "system.service.start",
+          "system.service.stop", 
+          "system.config.update"
+        ],
+        "priority": "normal",
+        "persistence": true
+      },
+      "security": {
+        "description": "Security alerts and threat notifications",
+        "messageTypes": [
+          "security.alert",
+          "security.threat.detected",
+          "security.access.denied"
+        ],
+        "priority": "high",
+        "persistence": true
+      },
+      "terminal": {
+        "description": "Terminal service communications",
+        "messageTypes": [
+          "terminal.session.start",
+          "terminal.session.end",
+          "terminal.command"
+        ],
+        "priority": "normal",
+        "persistence": false
+      },
+      "monitoring": {
+        "description": "Monitoring and metrics data",
+        "messageTypes": [
+          "monitoring.metric.update",
+          "monitoring.health.check",
+          "monitoring.alert.triggered"
+        ],
+        "priority": "low",
+        "persistence": false
+      }
+    },
+    "security": {
+      "enableEncryption": true,
+      "auditAllMessages": true,
+      "logLevel": "info",
+      "secureHeaders": true
+    },
+    "monitoring": {
+      "enableMetrics": true,
+      "healthChecks": true,
+      "performanceTracking": true
+    }
+  }
+}

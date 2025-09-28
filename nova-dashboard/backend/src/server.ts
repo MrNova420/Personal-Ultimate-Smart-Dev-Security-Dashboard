@@ -13,6 +13,7 @@ import { logger } from '@/utils/logger';
 import { validateEnvironment } from '@/config/environment';
 import { securityMonitor } from '@/security/securityMonitor';
 import { auditLogger } from '@/security/auditLogger';
+import { messageQueue } from '@/messaging/messageQueue';
 import routes from '@/routes';
 
 // Load environment variables
@@ -42,6 +43,7 @@ class NovaShieldServer {
     this.initializeRoutes();
     this.initializeErrorHandling();
     this.initializeSecurityMonitoring();
+    this.initializeMessageQueue();
     this.createServer();
   }
 
@@ -273,6 +275,166 @@ class NovaShieldServer {
     logger.info('🛡️ Security monitoring system initialized', { 
       alertRules: defaultRules.length 
     });
+  }
+
+  /**
+   * Initialize message queue system for inter-service communication
+   */
+  private initializeMessageQueue(): void {
+    // Set up message queue event listeners
+    messageQueue.on('connected', () => {
+      logger.info('📨 Message queue system connected and ready');
+      
+      // Set up system message handlers
+      this.setupSystemMessageHandlers();
+    });
+
+    messageQueue.on('error', (error) => {
+      logger.error('🚨 Message queue error', error);
+      
+      // Log security event for message queue errors
+      auditLogger.logSecurityEvent(
+        'system',
+        'high',
+        'message_queue_error',
+        { error: error.message },
+        {
+          ipAddress: '127.0.0.1',
+          outcome: 'failure'
+        }
+      );
+    });
+
+    messageQueue.on('disconnected', () => {
+      logger.warn('⚠️ Message queue disconnected');
+    });
+
+    logger.info('🔄 Message Queue system initializing...');
+  }
+
+  /**
+   * Set up system message handlers for inter-service communication
+   */
+  private async setupSystemMessageHandlers(): Promise<void> {
+    // Subscribe to system notifications
+    await messageQueue.subscribeToQueue('system', async (message) => {
+      try {
+        logger.info('📥 System message received', {
+          type: message.type,
+          source: message.source,
+          messageId: message.id
+        });
+
+        switch (message.type) {
+          case 'system.service.start':
+            await this.handleServiceStartNotification(message);
+            break;
+          case 'system.service.stop':
+            await this.handleServiceStopNotification(message);
+            break;
+          case 'system.config.update':
+            await this.handleConfigUpdateNotification(message);
+            break;
+          default:
+            logger.debug('Unhandled system message type', { type: message.type });
+        }
+
+        return true; // Message processed successfully
+      } catch (error) {
+        logger.error('🚨 Failed to process system message', {
+          error: error.message,
+          messageId: message.id,
+          type: message.type
+        });
+        return false; // Message processing failed
+      }
+    });
+
+    // Subscribe to security alerts
+    await messageQueue.subscribeToQueue('security', async (message) => {
+      try {
+        logger.warn('🔔 Security alert received', {
+          type: message.type,
+          source: message.source,
+          messageId: message.id
+        });
+
+        // Forward security messages to security monitor
+        await securityMonitor.processEvent({
+          id: message.id,
+          timestamp: message.timestamp,
+          eventType: 'security',
+          severity: message.priority === 'critical' ? 'critical' : 'high',
+          action: message.type,
+          outcome: 'success',
+          details: message.payload
+        });
+
+        return true;
+      } catch (error) {
+        logger.error('🚨 Failed to process security message', {
+          error: error.message,
+          messageId: message.id
+        });
+        return false;
+      }
+    });
+
+    logger.info('🔔 System message handlers configured');
+  }
+
+  private async handleServiceStartNotification(message: any): Promise<void> {
+    logger.info(`🚀 Service started: ${message.payload.serviceName}`);
+    
+    await auditLogger.logSecurityEvent(
+      'system',
+      'low',
+      'service_start_notification',
+      {
+        serviceName: message.payload.serviceName,
+        messageId: message.id
+      },
+      {
+        ipAddress: '127.0.0.1',
+        outcome: 'success'
+      }
+    );
+  }
+
+  private async handleServiceStopNotification(message: any): Promise<void> {
+    logger.warn(`🛑 Service stopped: ${message.payload.serviceName}`);
+    
+    await auditLogger.logSecurityEvent(
+      'system',
+      'medium',
+      'service_stop_notification',
+      {
+        serviceName: message.payload.serviceName,
+        messageId: message.id
+      },
+      {
+        ipAddress: '127.0.0.1',
+        outcome: 'success'
+      }
+    );
+  }
+
+  private async handleConfigUpdateNotification(message: any): Promise<void> {
+    logger.info('⚙️ Configuration update received', { config: message.payload.config });
+    
+    await auditLogger.logSecurityEvent(
+      'system',
+      'medium',
+      'config_update_notification',
+      {
+        config: message.payload.config,
+        messageId: message.id
+      },
+      {
+        ipAddress: '127.0.0.1',
+        outcome: 'success'
+      }
+    );
   }
 
   /**

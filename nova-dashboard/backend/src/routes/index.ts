@@ -6,12 +6,13 @@ import monitoringRoutes from './monitoring';
 import developmentRoutes from './development';
 import cryptoRoutes from './crypto';
 import gatewayRoutes from './gateway';
+import messagingRoutes from './messaging';
 
 /**
  * NovaShield API Routes
  * 
  * Central router configuration for all API endpoints
- * Implements security-first routing with API Gateway integration
+ * Implements security-first routing with API Gateway and messaging integration
  */
 
 const router = Router();
@@ -23,6 +24,7 @@ router.get('/', (req, res) => {
     version: '1.0.0',
     description: 'Enterprise-grade security and development platform backend API',
     gateway: 'Enabled with microservices routing',
+    messaging: 'Enabled with inter-service communication',
     endpoints: {
       auth: '/api/auth',
       crypto: '/api/crypto',
@@ -30,7 +32,8 @@ router.get('/', (req, res) => {
       security: '/api/security',
       monitoring: '/api/monitoring',
       development: '/api/development',
-      gateway: '/api/gateway'
+      gateway: '/api/gateway',
+      messaging: '/api/messaging'
     },
     microservices: {
       'security-engine': '/api/gateway/security-engine',
@@ -47,6 +50,9 @@ router.get('/', (req, res) => {
 
 // Mount API Gateway routes first (highest priority)
 router.use('/gateway', gatewayRoutes);
+
+// Mount message queue routes
+router.use('/messaging', messagingRoutes);
 
 // Mount local service routes
 router.use('/auth', authRoutes);
