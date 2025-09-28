@@ -83,7 +83,7 @@ time = "0.3"
 # Testing
 criterion = "0.4"
 proptest = "1.1"
-mockall = "0.11"
+mockall = "0.13"
 tokio-test = "0.4"
 
 [profile.release]
