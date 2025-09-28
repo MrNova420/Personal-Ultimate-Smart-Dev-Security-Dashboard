@@ -1,0 +1,85 @@
+{
+  "apiGateway": {
+    "name": "NovaShield API Gateway",
+    "version": "1.0.0",
+    "description": "Enterprise API Gateway with microservices routing and security",
+    "features": {
+      "serviceDiscovery": true,
+      "loadBalancing": true,
+      "circuitBreaker": true,
+      "rateLimiting": true,
+      "healthChecks": true,
+      "securityMiddleware": true,
+      "auditLogging": true
+    },
+    "services": {
+      "security-engine": {
+        "url": "http://security-engine:8001",
+        "healthCheck": "/health",
+        "rateLimits": {
+          "windowMs": 300000,
+          "maxRequests": 50
+        },
+        "endpoints": [
+          "/",
+          "/health",
+          "/api/alerts",
+          "/api/scans",
+          "/api/threats",
+          "/api/metrics"
+        ]
+      },
+      "terminal-service": {
+        "url": "http://terminal-service:8080",
+        "healthCheck": "/health",
+        "rateLimits": {
+          "windowMs": 60000,
+          "maxRequests": 30
+        },
+        "endpoints": [
+          "/",
+          "/health",
+          "/api/sessions",
+          "/api/metrics"
+        ]
+      },
+      "monitoring-service": {
+        "url": "http://monitoring-service:9090",
+        "healthCheck": "/health",
+        "rateLimits": {
+          "windowMs": 60000,
+          "maxRequests": 100
+        },
+        "endpoints": [
+          "/",
+          "/health",
+          "/api/metrics",
+          "/api/alerts",
+          "/api/status"
+        ]
+      }
+    },
+    "circuitBreaker": {
+      "failureThreshold": 5,
+      "timeout": 60000,
+      "monitoringPeriod": 10000
+    },
+    "healthChecks": {
+      "interval": 30000,
+      "timeout": 5000,
+      "retries": 3
+    },
+    "security": {
+      "auditAllRequests": true,
+      "logFailedRequests": true,
+      "enableCors": true,
+      "corsOrigins": ["http://localhost:3000"],
+      "securityHeaders": true
+    },
+    "monitoring": {
+      "enableMetrics": true,
+      "enableTracing": true,
+      "logLevel": "info"
+    }
+  }
+}

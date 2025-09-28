@@ -5,12 +5,13 @@ import securityRoutes from './security';
 import monitoringRoutes from './monitoring';
 import developmentRoutes from './development';
 import cryptoRoutes from './crypto';
+import gatewayRoutes from './gateway';
 
 /**
  * NovaShield API Routes
  * 
  * Central router configuration for all API endpoints
- * Implements security-first routing with proper middleware
+ * Implements security-first routing with API Gateway integration
  */
 
 const router = Router();
@@ -21,6 +22,7 @@ router.get('/', (req, res) => {
     name: 'NovaShield 2025 Enterprise Security Platform API',
     version: '1.0.0',
     description: 'Enterprise-grade security and development platform backend API',
+    gateway: 'Enabled with microservices routing',
     endpoints: {
       auth: '/api/auth',
       crypto: '/api/crypto',
@@ -28,6 +30,12 @@ router.get('/', (req, res) => {
       security: '/api/security',
       monitoring: '/api/monitoring',
       development: '/api/development',
+      gateway: '/api/gateway'
+    },
+    microservices: {
+      'security-engine': '/api/gateway/security-engine',
+      'terminal-service': '/api/gateway/terminal',
+      'monitoring-service': '/api/gateway/monitoring'
     },
     documentation: '/api/docs',
     health: '/health',
@@ -37,7 +45,10 @@ router.get('/', (req, res) => {
   });
 });
 
-// Mount route modules
+// Mount API Gateway routes first (highest priority)
+router.use('/gateway', gatewayRoutes);
+
+// Mount local service routes
 router.use('/auth', authRoutes);
 router.use('/crypto', cryptoRoutes);
 router.use('/terminal', terminalRoutes);
