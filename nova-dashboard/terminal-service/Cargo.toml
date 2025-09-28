@@ -36,7 +36,7 @@ ring = "0.16"
 rustls = "0.20"
 webpki-roots = "0.22"
 argon2 = "0.4"
-rand = "0.8"
+rand = "0.9"
 uuid = { version = "1.3", features = ["v4", "serde"] }
 
 # Logging & Monitoring
