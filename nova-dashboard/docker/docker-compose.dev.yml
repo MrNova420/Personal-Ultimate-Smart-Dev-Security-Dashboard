@@ -1,0 +1,319 @@
+version: '3.8'
+
+services:
+  # Frontend React Application (Development)
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
+      - REACT_APP_WS_URL=ws://localhost:5000
+      - REACT_APP_TERMINAL_WS_URL=ws://localhost:8080
+      - REACT_APP_MONITORING_WS_URL=ws://localhost:9090
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+      - /app/build
+    depends_on:
+      - backend
+    networks:
+      - novashield-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Backend Node.js API (Development)
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "5000:5000"
+      - "9229:9229" # Debug port
+    environment:
+      - NODE_ENV=development
+      - JWT_SECRET=dev-jwt-secret-change-in-production-12345678901234567890
+      - SESSION_SECRET=dev-session-secret-change-in-production-12345678901234567890
+      - DATABASE_URL=file:../data/databases/novashield-dev.db
+      - REDIS_URL=redis://redis:6379
+      - PORT=5000
+      - CORS_ORIGIN=http://localhost:3000
+      - SECURITY_ENGINE_URL=http://security-engine:8001
+      - AI_ENGINE_URL=http://ai-engine:8002
+      - TERMINAL_SERVICE_URL=http://terminal-service:8080
+      - MONITORING_SERVICE_URL=http://monitoring-service:9090
+      - LOG_LEVEL=debug
+      - BCRYPT_ROUNDS=10
+    volumes:
+      - ../backend:/app
+      - /app/node_modules
+      - /app/dist
+      - ../data:/app/data
+      - ../logs:/app/logs
+    depends_on:
+      - redis
+    networks:
+      - novashield-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # Security Engine Python Service (Development)
+  security-engine:
+    build:
+      context: ../security-engine
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "8001:8001"
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=development
+      - DATABASE_URL=sqlite:///app/data/databases/security-dev.db
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=DEBUG
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ../security-engine:/app
+      - ../data:/app/data
+      - ../logs:/app/logs
+    depends_on:
+      - redis
+    networks:
+      - novashield-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # AI Engine Python Service (Development)
+  ai-engine:
+    build:
+      context: ../ai-engine
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "8002:8002"
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=development
+      - DATABASE_URL=sqlite:///app/data/databases/ai-dev.db
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=DEBUG
+      - MODEL_PATH=/app/models
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ../ai-engine:/app
+      - ../data:/app/data
+      - ../logs:/app/logs
+    depends_on:
+      - redis
+    networks:
+      - novashield-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8002/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Terminal Service Rust Application (Development)
+  terminal-service:
+    build:
+      context: ../terminal-service
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "8080:8080"
+    environment:
+      - RUST_ENV=development
+      - RUST_LOG=debug
+      - DATABASE_URL=sqlite:../data/databases/terminal-dev.db
+      - REDIS_URL=redis://redis:6379
+      - BIND_ADDRESS=0.0.0.0:8080
+    volumes:
+      - ../terminal-service:/app
+      - ../data:/app/data
+      - ../logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - redis
+    networks:
+      - novashield-network
+    restart: unless-stopped
+    privileged: true
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # Monitoring Service Go Application (Development)
+  monitoring-service:
+    build:
+      context: ../monitoring-service
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "9090:9090"
+    environment:
+      - GO_ENV=development
+      - LOG_LEVEL=debug
+      - DATABASE_URL=sqlite3:/app/data/databases/monitoring-dev.db
+      - REDIS_URL=redis://redis:6379
+      - PROMETHEUS_URL=http://prometheus:9091
+      - INFLUXDB_URL=http://influxdb:8086
+      - BIND_ADDRESS=:9090
+    volumes:
+      - ../monitoring-service:/app
+      - ../data:/app/data
+      - ../logs:/app/logs
+    depends_on:
+      - redis
+      - prometheus
+      - influxdb
+    networks:
+      - novashield-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # Redis for caching and session storage
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass novashield-dev-redis-password
+    volumes:
+      - redis-dev-data:/data
+      - ../docker/configs/redis-dev.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - novashield-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "novashield-dev-redis-password", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus for metrics collection (Development)
+  prometheus:
+    image: prom/prometheus:v2.40.0
+    ports:
+      - "9091:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus-dev.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    volumes:
+      - ../config/monitoring/prometheus-dev.yml:/etc/prometheus/prometheus-dev.yml
+      - prometheus-dev-data:/prometheus
+    networks:
+      - novashield-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # InfluxDB for time-series data (Development)
+  influxdb:
+    image: influxdb:2.6-alpine
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=novashield-dev
+      - DOCKER_INFLUXDB_INIT_PASSWORD=novashield-dev-influx-password
+      - DOCKER_INFLUXDB_INIT_ORG=novashield-dev
+      - DOCKER_INFLUXDB_INIT_BUCKET=metrics-dev
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=novashield-dev-admin-token
+    volumes:
+      - influxdb-dev-data:/var/lib/influxdb2
+    networks:
+      - novashield-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8086/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana for visualization (Development)
+  grafana:
+    image: grafana/grafana:9.4.0
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=novashield-dev-grafana-password
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+      - GF_RENDERING_SERVER_URL=http://renderer:8081/render
+      - GF_RENDERING_CALLBACK_URL=http://grafana:3000/
+      - GF_LOG_FILTERS=rendering:debug
+    volumes:
+      - grafana-dev-data:/var/lib/grafana
+      - ../config/monitoring/grafana-dev.ini:/etc/grafana/grafana.ini
+      - ../config/monitoring/dashboards:/etc/grafana/provisioning/dashboards
+      - ../config/monitoring/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+      - influxdb
+    networks:
+      - novashield-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  redis-dev-data:
+  prometheus-dev-data:
+  influxdb-dev-data:
+  grafana-dev-data:
+
+networks:
+  novashield-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

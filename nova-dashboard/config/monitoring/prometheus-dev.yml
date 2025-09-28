@@ -1,0 +1,77 @@
+# NovaShield 2025 Prometheus Configuration (Development)
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'novashield-dev'
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 5s
+    metrics_path: /metrics
+
+  # NovaShield Backend API
+  - job_name: 'novashield-backend'
+    static_configs:
+      - targets: ['backend:5000']
+    scrape_interval: 10s
+    metrics_path: /metrics
+    scheme: http
+    
+  # NovaShield Security Engine
+  - job_name: 'novashield-security'
+    static_configs:
+      - targets: ['security-engine:8001']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scheme: http
+    
+  # NovaShield AI Engine
+  - job_name: 'novashield-ai'
+    static_configs:
+      - targets: ['ai-engine:8002']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scheme: http
+    
+  # NovaShield Terminal Service
+  - job_name: 'novashield-terminal'
+    static_configs:
+      - targets: ['terminal-service:8080']
+    scrape_interval: 10s
+    metrics_path: /metrics
+    scheme: http
+    
+  # NovaShield Monitoring Service
+  - job_name: 'novashield-monitoring'
+    static_configs:
+      - targets: ['monitoring-service:9090']
+    scrape_interval: 10s
+    metrics_path: /metrics
+    scheme: http
+
+  # Redis monitoring
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+
+  # InfluxDB monitoring
+  - job_name: 'influxdb'
+    static_configs:
+      - targets: ['influxdb:8086']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    scheme: http
+
+  # Node Exporter (if added later)
+  # - job_name: 'node'
+  #   static_configs:
+  #     - targets: ['node-exporter:9100']
