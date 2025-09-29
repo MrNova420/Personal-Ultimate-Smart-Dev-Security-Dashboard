@@ -11,8 +11,8 @@
  */
 
 import { EventEmitter } from 'events';
-import { logger } from '@/utils/logger';
-import { auditLogger } from '@/security/auditLogger';
+import { logger } from '../utils/logger';
+import { auditLogger } from '../security/auditLogger';
 
 // Message types for inter-service communication
 export interface QueueMessage {
