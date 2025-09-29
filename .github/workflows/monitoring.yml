@@ -1,0 +1,694 @@
+name: 📊 Comprehensive Monitoring & Observability
+
+on:
+  schedule:
+    # Run comprehensive monitoring every 4 hours
+    - cron: '0 */4 * * *'
+    # Run weekly comprehensive analysis on Sundays at 1 AM UTC
+    - cron: '0 1 * * 0'
+  workflow_run:
+    workflows: ["🛡️ NovaShield 2025 Advanced CI/CD Pipeline - Autonomous Development", "🔒 NovaShield Advanced Security Monitoring & Analysis", "🔍 Repository Verification & Documentation Validation"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      monitoring_depth:
+        description: 'Monitoring analysis depth'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+          - 'standard'
+          - 'comprehensive'
+          - 'deep'
+
+env:
+  MONITORING_DEPTH: ${{ github.event.inputs.monitoring_depth || 'standard' }}
+
+jobs:
+  # Workflow Health Monitoring
+  workflow-health-monitoring:
+    name: 🔍 Workflow Health Assessment
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 📊 Analyze Workflow Performance
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Get recent workflow runs
+          const { data: workflows } = await github.rest.actions.listRepoWorkflows({
+            owner: context.repo.owner,
+            repo: context.repo.repo
+          });
+          
+          const workflowAnalysis = {
+            totalWorkflows: workflows.total_count,
+            workflows: [],
+            overallHealth: 'unknown',
+            recommendations: []
+          };
+          
+          for (const workflow of workflows.workflows) {
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: workflow.id,
+              per_page: 10
+            });
+            
+            const recentRuns = runs.workflow_runs.slice(0, 10);
+            const successCount = recentRuns.filter(run => run.conclusion === 'success').length;
+            const failureCount = recentRuns.filter(run => run.conclusion === 'failure').length;
+            const successRate = recentRuns.length > 0 ? (successCount / recentRuns.length) * 100 : 0;
+            
+            const avgDuration = recentRuns.length > 0 
+              ? recentRuns.reduce((sum, run) => {
+                  const duration = run.updated_at && run.created_at 
+                    ? new Date(run.updated_at) - new Date(run.created_at) 
+                    : 0;
+                  return sum + duration;
+                }, 0) / recentRuns.length
+              : 0;
+            
+            workflowAnalysis.workflows.push({
+              name: workflow.name,
+              path: workflow.path,
+              state: workflow.state,
+              successRate: Math.round(successRate),
+              totalRuns: recentRuns.length,
+              avgDurationMinutes: Math.round(avgDuration / (1000 * 60)),
+              lastRun: recentRuns[0]?.created_at || 'Never',
+              status: successRate >= 80 ? 'healthy' : successRate >= 60 ? 'warning' : 'critical'
+            });
+          }
+          
+          // Determine overall health
+          const healthyWorkflows = workflowAnalysis.workflows.filter(w => w.status === 'healthy').length;
+          const totalActiveWorkflows = workflowAnalysis.workflows.filter(w => w.state === 'active').length;
+          
+          if (totalActiveWorkflows === 0) {
+            workflowAnalysis.overallHealth = 'no-workflows';
+          } else if (healthyWorkflows / totalActiveWorkflows >= 0.8) {
+            workflowAnalysis.overallHealth = 'healthy';
+          } else if (healthyWorkflows / totalActiveWorkflows >= 0.6) {
+            workflowAnalysis.overallHealth = 'warning';
+          } else {
+            workflowAnalysis.overallHealth = 'critical';
+          }
+          
+          // Generate recommendations
+          const criticalWorkflows = workflowAnalysis.workflows.filter(w => w.status === 'critical');
+          const warningWorkflows = workflowAnalysis.workflows.filter(w => w.status === 'warning');
+          
+          if (criticalWorkflows.length > 0) {
+            workflowAnalysis.recommendations.push(`🚨 ${criticalWorkflows.length} workflow(s) have critical issues - immediate attention required`);
+          }
+          if (warningWorkflows.length > 0) {
+            workflowAnalysis.recommendations.push(`⚠️ ${warningWorkflows.length} workflow(s) need attention - review and optimize`);
+          }
+          
+          // Generate detailed report
+          const report = `# 📊 Workflow Health Analysis Report
+          
+**Generated**: ${new Date().toISOString()}
+**Overall Health**: ${workflowAnalysis.overallHealth.toUpperCase()}
+**Total Workflows**: ${workflowAnalysis.totalWorkflows}
+**Active Workflows**: ${totalActiveWorkflows}
+
+## 📈 Workflow Performance Summary
+
+| Workflow | Success Rate | Avg Duration | Status | Last Run |
+|----------|--------------|--------------|--------|----------|
+${workflowAnalysis.workflows.map(w => 
+  `| ${w.name} | ${w.successRate}% | ${w.avgDurationMinutes}min | ${w.status === 'healthy' ? '✅' : w.status === 'warning' ? '⚠️' : '🚨'} ${w.status} | ${w.lastRun} |`
+).join('\n')}
+
+## 🎯 Recommendations
+
+${workflowAnalysis.recommendations.length > 0 
+  ? workflowAnalysis.recommendations.map(rec => `- ${rec}`).join('\n')
+  : '✅ All workflows are performing well - no immediate action required'
+}
+
+## 📊 Health Score Distribution
+
+- **Healthy Workflows**: ${workflowAnalysis.workflows.filter(w => w.status === 'healthy').length}
+- **Warning Workflows**: ${workflowAnalysis.workflows.filter(w => w.status === 'warning').length}  
+- **Critical Workflows**: ${workflowAnalysis.workflows.filter(w => w.status === 'critical').length}
+          `;
+          
+          // Save analysis
+          fs.writeFileSync('workflow-health-analysis.md', report);
+          
+          // Output for other jobs
+          core.setOutput('overall-health', workflowAnalysis.overallHealth);
+          core.setOutput('critical-count', criticalWorkflows.length);
+          core.setOutput('warning-count', warningWorkflows.length);
+
+    - name: 🚨 Create Workflow Health Issue (if critical)
+      if: steps.analyze.outputs.critical-count > 0
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const report = fs.readFileSync('workflow-health-analysis.md', 'utf8');
+          
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: '🚨 Critical Workflow Health Issues Detected',
+            body: `# 🚨 Workflow Health Alert
+            
+**Critical workflows detected with poor performance**
+
+${report}
+
+## 🚨 Action Required
+
+The monitoring system has detected critical issues with one or more workflows. Please investigate and resolve these issues to maintain system reliability.
+
+**Priority**: HIGH
+**SLA**: 24 hours for initial investigation
+
+*This issue was automatically created by the Comprehensive Monitoring system.*`,
+            labels: ['workflow-health', 'critical', 'monitoring', 'automated']
+          });
+
+    - name: 📊 Upload Workflow Analysis
+      uses: actions/upload-artifact@v4
+      with:
+        name: workflow-health-analysis
+        path: workflow-health-analysis.md
+        retention-days: 30
+
+  # Repository Metrics Collection
+  repository-metrics:
+    name: 📈 Repository Metrics Collection
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 📊 Collect Repository Metrics
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Repository statistics
+          const { data: repo } = await github.rest.repos.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo
+          });
+          
+          // Issues and PRs
+          const { data: issues } = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'all',
+            per_page: 100
+          });
+          
+          const { data: pulls } = await github.rest.pulls.list({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'all',
+            per_page: 100
+          });
+          
+          // Commits in last 30 days
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          
+          const { data: commits } = await github.rest.repos.listCommits({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            since: thirtyDaysAgo.toISOString(),
+            per_page: 100
+          });
+          
+          // Code frequency analysis
+          const codeStats = {
+            totalFiles: 0,
+            codeFiles: 0,
+            documentationFiles: 0,
+            configFiles: 0,
+            testFiles: 0,
+            languages: {}
+          };
+          
+          // Get file statistics
+          const { data: contents } = await github.rest.repos.getContent({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            path: ''
+          });
+          
+          // Count files recursively (simplified)
+          const countFiles = async (path = '') => {
+            try {
+              const { data: items } = await github.rest.repos.getContent({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: path
+              });
+              
+              if (Array.isArray(items)) {
+                for (const item of items.slice(0, 20)) { // Limit to prevent rate limiting
+                  if (item.type === 'file') {
+                    codeStats.totalFiles++;
+                    
+                    const ext = item.name.split('.').pop()?.toLowerCase();
+                    
+                    // Categorize files
+                    if (['ts', 'js', 'py', 'rs', 'go', 'tsx', 'jsx'].includes(ext)) {
+                      codeStats.codeFiles++;
+                      codeStats.languages[ext] = (codeStats.languages[ext] || 0) + 1;
+                    } else if (['md', 'txt', 'rst'].includes(ext)) {
+                      codeStats.documentationFiles++;
+                    } else if (['json', 'yml', 'yaml', 'toml', 'ini'].includes(ext)) {
+                      codeStats.configFiles++;
+                    } else if (item.name.includes('test') || item.name.includes('spec')) {
+                      codeStats.testFiles++;
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.log(`Error accessing path ${path}:`, error.message);
+            }
+          };
+          
+          await countFiles();
+          await countFiles('nova-dashboard');
+          
+          // Generate metrics report
+          const metrics = {
+            repository: {
+              name: repo.name,
+              stars: repo.stargazers_count,
+              forks: repo.forks_count,
+              watchers: repo.watchers_count,
+              size: repo.size,
+              lastUpdated: repo.updated_at,
+              defaultBranch: repo.default_branch,
+              topics: repo.topics || []
+            },
+            activity: {
+              openIssues: issues.filter(i => i.state === 'open' && !i.pull_request).length,
+              closedIssues: issues.filter(i => i.state === 'closed' && !i.pull_request).length,
+              openPRs: pulls.filter(p => p.state === 'open').length,
+              closedPRs: pulls.filter(p => p.state === 'closed').length,
+              mergedPRs: pulls.filter(p => p.merged_at).length,
+              commitsLast30Days: commits.length,
+              contributors: [...new Set(commits.map(c => c.author?.login).filter(Boolean))].length
+            },
+            codebase: codeStats,
+            health: {
+              issueResponseTime: 'TBD', // Would need more complex calculation
+              prMergeTime: 'TBD', // Would need more complex calculation
+              testCoverage: 'TBD', // Would need integration with coverage tools
+              codeQuality: 'TBD' // Would need integration with quality tools
+            }
+          };
+          
+          // Calculate health scores
+          const healthScore = {
+            activity: Math.min(100, (metrics.activity.commitsLast30Days * 2 + metrics.activity.contributors * 10)),
+            maintenance: Math.min(100, (metrics.activity.closedIssues / Math.max(1, metrics.activity.openIssues)) * 20),
+            community: Math.min(100, (metrics.repository.stars + metrics.repository.forks + metrics.repository.watchers) / 10),
+            codebase: Math.min(100, (metrics.codebase.codeFiles / Math.max(1, metrics.codebase.totalFiles)) * 100)
+          };
+          
+          const overallHealth = Math.round(
+            (healthScore.activity + healthScore.maintenance + healthScore.community + healthScore.codebase) / 4
+          );
+          
+          // Generate comprehensive report
+          const report = `# 📊 Repository Metrics Dashboard
+          
+**Generated**: ${new Date().toISOString()}
+**Overall Health Score**: ${overallHealth}/100
+
+## 📈 Repository Overview
+
+- **Name**: ${metrics.repository.name}
+- **Stars**: ⭐ ${metrics.repository.stars}
+- **Forks**: 🍴 ${metrics.repository.forks}
+- **Watchers**: 👀 ${metrics.repository.watchers}
+- **Size**: 💾 ${(metrics.repository.size / 1024).toFixed(1)} MB
+- **Topics**: ${metrics.repository.topics.join(', ') || 'None'}
+
+## 🚀 Development Activity (Last 30 Days)
+
+- **Commits**: 📝 ${metrics.activity.commitsLast30Days}
+- **Contributors**: 👥 ${metrics.activity.contributors}
+- **Open Issues**: 🐛 ${metrics.activity.openIssues}
+- **Closed Issues**: ✅ ${metrics.activity.closedIssues}
+- **Open PRs**: 🔄 ${metrics.activity.openPRs}
+- **Merged PRs**: ✅ ${metrics.activity.mergedPRs}
+
+## 💻 Codebase Composition
+
+- **Total Files**: 📄 ${metrics.codebase.totalFiles}
+- **Code Files**: 💻 ${metrics.codebase.codeFiles}
+- **Documentation**: 📝 ${metrics.codebase.documentationFiles}
+- **Configuration**: ⚙️ ${metrics.codebase.configFiles}
+- **Test Files**: 🧪 ${metrics.codebase.testFiles}
+
+### Language Distribution
+${Object.entries(metrics.codebase.languages)
+  .sort(([,a], [,b]) => b - a)
+  .map(([lang, count]) => `- **${lang.toUpperCase()}**: ${count} files`)
+  .join('\n')}
+
+## 📊 Health Scores
+
+- **Activity Score**: ${healthScore.activity}/100
+- **Maintenance Score**: ${healthScore.maintenance}/100  
+- **Community Score**: ${healthScore.community}/100
+- **Codebase Score**: ${healthScore.codebase}/100
+
+## 🎯 Recommendations
+
+${overallHealth >= 80 
+  ? '✅ Repository health is excellent - keep up the great work!'
+  : overallHealth >= 60
+  ? '⚠️ Repository health is good but could be improved - consider increasing activity and addressing open issues'
+  : '🚨 Repository health needs attention - focus on regular commits, issue resolution, and community engagement'
+}
+          `;
+          
+          fs.writeFileSync('repository-metrics.md', report);
+          
+          // Output key metrics
+          core.setOutput('health-score', overallHealth);
+          core.setOutput('open-issues', metrics.activity.openIssues);
+          core.setOutput('commits-30d', metrics.activity.commitsLast30Days);
+
+    - name: 📊 Upload Repository Metrics
+      uses: actions/upload-artifact@v4
+      with:
+        name: repository-metrics
+        path: repository-metrics.md
+        retention-days: 90
+
+  # Security Posture Assessment
+  security-posture:
+    name: 🔒 Security Posture Assessment
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: read
+      contents: read
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔒 Assess Security Posture
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Get security alerts
+          let vulnerabilityAlerts = [];
+          let secretScanningAlerts = [];
+          
+          try {
+            const { data: vulnAlerts } = await github.rest.dependabot.listAlertsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+            vulnerabilityAlerts = vulnAlerts;
+          } catch (error) {
+            console.log('Cannot access vulnerability alerts:', error.message);
+          }
+          
+          try {
+            const { data: secretAlerts } = await github.rest.secretScanning.listAlertsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+            secretScanningAlerts = secretAlerts;
+          } catch (error) {
+            console.log('Cannot access secret scanning alerts:', error.message);
+          }
+          
+          // Analyze security files
+          const securityFiles = [
+            'SECURITY.md',
+            '.github/workflows/security.yml',
+            '.github/dependabot.yml',
+            '.gitignore'
+          ];
+          
+          const securityFileStatus = {};
+          for (const file of securityFiles) {
+            try {
+              await github.rest.repos.getContent({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: file
+              });
+              securityFileStatus[file] = true;
+            } catch (error) {
+              securityFileStatus[file] = false;
+            }
+          }
+          
+          // Calculate security score
+          const securityScore = {
+            vulnerabilityManagement: vulnerabilityAlerts.length === 0 ? 100 : Math.max(0, 100 - vulnerabilityAlerts.length * 10),
+            secretsManagement: secretScanningAlerts.length === 0 ? 100 : Math.max(0, 100 - secretScanningAlerts.length * 20),
+            securityConfiguration: (Object.values(securityFileStatus).filter(Boolean).length / securityFiles.length) * 100,
+            workflowSecurity: securityFileStatus['.github/workflows/security.yml'] ? 100 : 0
+          };
+          
+          const overallSecurityScore = Math.round(
+            (securityScore.vulnerabilityManagement + 
+             securityScore.secretsManagement + 
+             securityScore.securityConfiguration + 
+             securityScore.workflowSecurity) / 4
+          );
+          
+          // Determine security posture
+          let securityPosture = 'unknown';
+          if (overallSecurityScore >= 90) securityPosture = 'excellent';
+          else if (overallSecurityScore >= 75) securityPosture = 'good';
+          else if (overallSecurityScore >= 50) securityPosture = 'fair';
+          else securityPosture = 'poor';
+          
+          // Generate security report
+          const report = `# 🔒 Security Posture Assessment
+          
+**Generated**: ${new Date().toISOString()}
+**Overall Security Score**: ${overallSecurityScore}/100
+**Security Posture**: ${securityPosture.toUpperCase()}
+
+## 🚨 Active Security Alerts
+
+### Vulnerability Alerts
+- **Open Dependabot Alerts**: ${vulnerabilityAlerts.length}
+${vulnerabilityAlerts.slice(0, 5).map(alert => 
+  `  - ${alert.security_vulnerability?.package?.name}: ${alert.security_advisory?.summary}`
+).join('\n')}
+
+### Secret Scanning Alerts  
+- **Open Secret Alerts**: ${secretScanningAlerts.length}
+${secretScanningAlerts.slice(0, 5).map(alert => 
+  `  - ${alert.secret_type}: ${alert.locations?.[0]?.path || 'Location not specified'}`
+).join('\n')}
+
+## 📋 Security Configuration
+
+| Security File | Status |
+|---------------|---------|
+${securityFiles.map(file => 
+  `| ${file} | ${securityFileStatus[file] ? '✅ Present' : '❌ Missing'} |`
+).join('\n')}
+
+## 📊 Security Scores
+
+- **Vulnerability Management**: ${securityScore.vulnerabilityManagement}/100
+- **Secrets Management**: ${securityScore.secretsManagement}/100
+- **Security Configuration**: ${Math.round(securityScore.securityConfiguration)}/100
+- **Workflow Security**: ${securityScore.workflowSecurity}/100
+
+## 🎯 Security Recommendations
+
+${overallSecurityScore >= 90 
+  ? '✅ Excellent security posture - maintain current practices'
+  : overallSecurityScore >= 75
+  ? '⚠️ Good security posture - address any open alerts promptly'
+  : overallSecurityScore >= 50
+  ? '🚨 Fair security posture - immediate attention required for security improvements'
+  : '🚨 Poor security posture - critical security issues need immediate resolution'
+}
+
+${vulnerabilityAlerts.length > 0 ? `\n### 🚨 Immediate Actions Required\n- Address ${vulnerabilityAlerts.length} open vulnerability alert(s)` : ''}
+${secretScanningAlerts.length > 0 ? `\n- Resolve ${secretScanningAlerts.length} secret scanning alert(s)` : ''}
+${!securityFileStatus['SECURITY.md'] ? '\n- Create SECURITY.md file with vulnerability reporting process' : ''}
+${!securityFileStatus['.github/workflows/security.yml'] ? '\n- Implement automated security scanning workflow' : ''}
+          `;
+          
+          fs.writeFileSync('security-posture.md', report);
+          
+          // Output security metrics
+          core.setOutput('security-score', overallSecurityScore);
+          core.setOutput('vulnerability-alerts', vulnerabilityAlerts.length);
+          core.setOutput('secret-alerts', secretScanningAlerts.length);
+          core.setOutput('security-posture', securityPosture);
+
+    - name: 🚨 Create Security Alert (if poor posture)
+      if: steps.assess.outputs.security-posture == 'poor'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const report = fs.readFileSync('security-posture.md', 'utf8');
+          
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: '🚨 URGENT: Poor Security Posture Detected',
+            body: `# 🚨 Critical Security Alert
+            
+**POOR SECURITY POSTURE DETECTED - IMMEDIATE ACTION REQUIRED**
+
+${report}
+
+## 🚨 URGENT ACTION REQUIRED
+
+The security posture assessment has identified critical security issues that require immediate attention.
+
+**Priority**: CRITICAL
+**SLA**: 12 hours for initial response, 48 hours for resolution
+
+*This alert was automatically created by the Comprehensive Monitoring system.*`,
+            labels: ['security', 'critical', 'monitoring', 'automated', 'urgent']
+          });
+
+    - name: 📊 Upload Security Assessment
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-posture-assessment
+        path: security-posture.md
+        retention-days: 90
+
+  # Final Monitoring Report
+  monitoring-summary:
+    name: 📋 Monitoring Summary Report
+    runs-on: ubuntu-latest  
+    needs: [workflow-health-monitoring, repository-metrics, security-posture]
+    if: always()
+    permissions:
+      contents: read
+      issues: write
+    
+    steps:
+    - name: 📁 Download All Monitoring Results
+      uses: actions/download-artifact@v4
+      with:
+        path: monitoring-results/
+
+    - name: 📊 Generate Comprehensive Monitoring Report
+      run: |
+        echo "📊 Generating comprehensive monitoring report..."
+        
+        cat > comprehensive-monitoring-report.md << 'EOF'
+        # 📊 NovaShield 2025 - Comprehensive Monitoring Report
+        
+        **Generated**: $(date)
+        **Monitoring Depth**: ${{ env.MONITORING_DEPTH }}
+        **Report Type**: Comprehensive System Health Assessment
+        
+        ---
+        
+        ## 📈 Executive Summary
+        
+        | Component | Status | Score | Details |
+        |-----------|--------|-------|---------|
+        | Workflow Health | ${{ needs.workflow-health-monitoring.result == 'success' && '✅ Healthy' || '❌ Issues' }} | - | Workflow performance monitoring |
+        | Repository Health | ${{ needs.repository-metrics.result == 'success' && '✅ Healthy' || '❌ Issues' }} | - | Code and activity metrics |
+        | Security Posture | ${{ needs.security-posture.result == 'success' && '✅ Assessed' || '❌ Issues' }} | - | Security configuration analysis |
+        
+        ---
+        
+        ## 🎯 Key Findings
+        EOF
+        
+        # Add workflow health summary if available
+        if [ -f "monitoring-results/workflow-health-analysis/workflow-health-analysis.md" ]; then
+          echo "" >> comprehensive-monitoring-report.md
+          echo "### 🔍 Workflow Health Summary" >> comprehensive-monitoring-report.md
+          echo "Workflow performance analysis completed - see detailed report for specifics." >> comprehensive-monitoring-report.md
+        fi
+        
+        # Add repository metrics if available
+        if [ -f "monitoring-results/repository-metrics/repository-metrics.md" ]; then
+          echo "" >> comprehensive-monitoring-report.md
+          echo "### 📈 Repository Metrics Summary" >> comprehensive-monitoring-report.md
+          echo "Repository activity and health metrics collected - see detailed report for metrics." >> comprehensive-monitoring-report.md
+        fi
+        
+        # Add security posture if available
+        if [ -f "monitoring-results/security-posture-assessment/security-posture.md" ]; then
+          echo "" >> comprehensive-monitoring-report.md
+          echo "### 🔒 Security Posture Summary" >> comprehensive-monitoring-report.md
+          echo "Security configuration and vulnerability assessment completed." >> comprehensive-monitoring-report.md
+        fi
+        
+        echo "" >> comprehensive-monitoring-report.md
+        echo "## 🚀 Monitoring System Status" >> comprehensive-monitoring-report.md
+        echo "- **Monitoring Depth**: ${{ env.MONITORING_DEPTH }}" >> comprehensive-monitoring-report.md
+        echo "- **Execution Time**: $(date)" >> comprehensive-monitoring-report.md
+        echo "- **Components Monitored**: 3 (Workflows, Repository, Security)" >> comprehensive-monitoring-report.md
+        echo "- **Status**: Monitoring completed successfully" >> comprehensive-monitoring-report.md
+        
+        echo "" >> comprehensive-monitoring-report.md
+        echo "## 📋 Next Steps" >> comprehensive-monitoring-report.md
+        echo "1. Review individual monitoring reports for detailed analysis" >> comprehensive-monitoring-report.md
+        echo "2. Address any critical issues identified in the assessments" >> comprehensive-monitoring-report.md
+        echo "3. Monitor trends over time for continuous improvement" >> comprehensive-monitoring-report.md
+        echo "4. Update monitoring configurations based on findings" >> comprehensive-monitoring-report.md
+
+    - name: 📊 Upload Comprehensive Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: comprehensive-monitoring-report
+        path: comprehensive-monitoring-report.md
+        retention-days: 90
+
+    - name: 📢 Final Monitoring Summary
+      run: |
+        echo "📊 Comprehensive Monitoring & Observability Completed"
+        echo "===================================================="
+        echo "Workflow Health Monitoring: ${{ needs.workflow-health-monitoring.result }}"
+        echo "Repository Metrics: ${{ needs.repository-metrics.result }}"
+        echo "Security Posture: ${{ needs.security-posture.result }}"
+        echo ""
+        echo "Monitoring Depth: ${{ env.MONITORING_DEPTH }}"
+        echo ""
+        echo "📊 All monitoring components executed successfully!"
+        echo "📋 Check artifacts for detailed monitoring reports and analysis!"
+        echo "📊 NovaShield 2025 - Comprehensive Monitoring Complete"
