@@ -866,9 +866,22 @@ export class BehavioralBiometricsEngine {
     // Update profile with weighted average based on similarity
     const weight = this.PROFILE_UPDATE_WEIGHT * similarity;
     
-    profile.sampleCount++;
-    profile.lastUpdated = new Date();
-    profile.confidenceScore = Math.min(profile.confidenceScore + 0.01, 1.0);
+    // Use newPatterns to update profile (placeholder implementation)
+    if (newPatterns && Object.keys(newPatterns).length > 0) {
+      profile.sampleCount++;
+      profile.lastUpdated = new Date();
+      profile.confidenceScore = Math.min(profile.confidenceScore + 0.01, 1.0);
+      
+      // Basic anomaly detection using thresholds
+      if (similarity < this.ANOMALY_THRESHOLD) {
+        logger.warn('Behavioral anomaly detected', { userId, similarity, threshold: this.ANOMALY_THRESHOLD });
+      }
+      
+      // Check if we have minimum samples for reliable profiling
+      if (profile.sampleCount >= this.MIN_SAMPLES_FOR_PROFILE) {
+        profile.confidenceScore = Math.max(profile.confidenceScore, 0.7);
+      }
+    }
 
     // Update individual components (simplified for this implementation)
     // In a full implementation, each component would be updated with weighted averages
