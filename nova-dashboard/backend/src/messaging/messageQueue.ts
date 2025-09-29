@@ -134,8 +134,9 @@ export class MessageQueueManager extends EventEmitter {
 
       return fullMessage.id;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('🚨 Failed to publish message', {
-        error: error.message,
+        error: errorMessage,
         queue,
         messageType: message.type
       });
@@ -215,8 +216,9 @@ export class MessageQueueManager extends EventEmitter {
             await this.handleFailedMessage(queue, message);
           }
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
           logger.error('🚨 Message processing failed', {
-            error: error.message,
+            error: errorMessage,
             messageId: message.id,
             queue
           });
@@ -230,8 +232,9 @@ export class MessageQueueManager extends EventEmitter {
         setTimeout(() => this.pollQueue(queue, handler), 1000);
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('🚨 Queue polling error', {
-        error: error.message,
+        error: errorMessage,
         queue
       });
       

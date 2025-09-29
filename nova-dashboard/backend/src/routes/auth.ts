@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { asyncHandler } from '@/middleware/errorHandler';
-import { logger } from '@/utils/logger';
-import ZeroTrustAuthEngine from '@/auth/zeroTrustAuth';
-import BehavioralBiometricsEngine from '@/auth/behavioralBiometrics';
+import { asyncHandler } from '../middleware/errorHandler';
+import { logger } from '../utils/logger';
+import ZeroTrustAuthEngine from '../auth/zeroTrustAuth';
+import BehavioralBiometricsEngine from '../auth/behavioralBiometrics';
 
 /**
  * Zero-Trust Authentication Routes

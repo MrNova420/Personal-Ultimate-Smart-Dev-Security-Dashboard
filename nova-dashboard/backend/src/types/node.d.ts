@@ -49,7 +49,7 @@ declare class EventEmitter {
 
 // Basic Express types
 declare module 'express' {
-  interface Request {
+  export interface Request {
     method: string;
     originalUrl: string;
     ip: string;
@@ -61,27 +61,53 @@ declare module 'express' {
     query: any;
   }
   
-  interface Response {
+  export interface Response {
     status(code: number): Response;
     json(obj: any): Response;
     send(data: any): Response;
     setHeader(name: string, value: string): void;
   }
   
-  interface NextFunction {
+  export interface NextFunction {
     (error?: any): void;
   }
+  
+  export interface Router {
+    get(path: string, ...handlers: any[]): Router;
+    post(path: string, ...handlers: any[]): Router;
+    put(path: string, ...handlers: any[]): Router;
+    delete(path: string, ...handlers: any[]): Router;
+    use(...args: any[]): Router;
+  }
+  
+  export function Router(): Router;
 }
 
 // Basic crypto module
 declare module 'crypto' {
-  export function createHash(algorithm: string): any;
-  export function createHmac(algorithm: string, key: any): any;
+  export function createHash(algorithm: string): {
+    update(data: string | Buffer): any;
+    digest(encoding?: string): string;
+  };
+  export function createHmac(algorithm: string, key: any): {
+    update(data: string | Buffer): any;
+    digest(encoding?: string): string;
+  };
   export function randomBytes(size: number): Buffer;
   export function createCipher(algorithm: string, password: any): any;
   export function createDecipher(algorithm: string, password: any): any;
-  export function createCipheriv(algorithm: string, key: any, iv: any): any;
-  export function createDecipheriv(algorithm: string, key: any, iv: any): any;
+  export function createCipheriv(algorithm: string, key: any, iv: any): {
+    update(data: string | Buffer): Buffer;
+    final(): Buffer;
+    setAAD(buffer: Buffer): void;
+    getAuthTag(): Buffer;
+  };
+  export function createDecipheriv(algorithm: string, key: any, iv: any): {
+    update(data: Buffer): Buffer;
+    final(): Buffer;
+    setAAD(buffer: Buffer): void;
+    setAuthTag(tag: Buffer): void;
+  };
 }
 
 // Basic events module
@@ -105,7 +131,15 @@ declare module 'axios' {
 
 // Basic express-rate-limit
 declare module 'express-rate-limit' {
-  function rateLimit(options: any): any;
+  function rateLimit(options: {
+    windowMs?: number;
+    max?: number | ((req: any) => number);
+    message?: string | object;
+    keyGenerator?: (req: any) => string;
+    standardHeaders?: boolean;
+    legacyHeaders?: boolean;
+    [key: string]: any;
+  }): any;
   export default rateLimit;
 }
 
