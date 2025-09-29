@@ -22,7 +22,8 @@ const speakeasy = {
   }),
   totp: {
     verify: (options: any) => true
-  }
+  },
+  otpauthURL: (options: any) => 'otpauth://totp/temp-url'
 };
 
 // Temporary QR Code implementation
