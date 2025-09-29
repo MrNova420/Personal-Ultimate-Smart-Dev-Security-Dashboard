@@ -5,15 +5,15 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { asyncHandler } from '@/middleware/errorHandler';
+import { asyncHandler } from '../middleware/errorHandler';
 import { 
   distributedLoggingService, 
   LogQuery, 
   LogLevel, 
   LogCategory, 
   ServiceName 
-} from '@/services/distributedLogging';
-import { auditLogger } from '@/security/auditLogger';
+} from '../services/distributedLogging';
+import { auditLogger } from '../security/auditLogger';
 
 const router = Router();
 

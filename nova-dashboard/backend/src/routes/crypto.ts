@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { asyncHandler } from '@/middleware/errorHandler';
-import { quantumCrypto } from '@/security/quantumCrypto';
-import { keyManager } from '@/security/keyManager';
-import { logger } from '@/utils/logger';
+import { asyncHandler } from '../middleware/errorHandler';
+import { quantumCrypto } from '../security/quantumCrypto';
+import { keyManager } from '../security/keyManager';
+import { logger } from '../utils/logger';
 
 /**
  * Quantum-Safe Cryptography API Routes

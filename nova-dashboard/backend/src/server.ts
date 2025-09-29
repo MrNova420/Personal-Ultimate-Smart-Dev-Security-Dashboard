@@ -8,15 +8,15 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 
-import { errorHandler } from '@/middleware/errorHandler';
-import { logger } from '@/utils/logger';
-import { validateEnvironment } from '@/config/environment';
-import { securityMonitor } from '@/security/securityMonitor';
-import { auditLogger } from '@/security/auditLogger';
-import { messageQueue } from '@/messaging/messageQueue';
-import { healthCheckService } from '@/services/healthCheck';
-import { distributedLoggingService } from '@/services/distributedLogging';
-import routes from '@/routes';
+import { errorHandler } from './middleware/errorHandler';
+import { logger } from './utils/logger';
+import { validateEnvironment } from './config/environment';
+import { securityMonitor } from './security/securityMonitor';
+import { auditLogger } from './security/auditLogger';
+import { messageQueue } from './messaging/messageQueue';
+import { healthCheckService } from './services/healthCheck';
+import { distributedLoggingService } from './services/distributedLogging';
+import routes from './routes';
 
 // Load environment variables
 dotenv.config();

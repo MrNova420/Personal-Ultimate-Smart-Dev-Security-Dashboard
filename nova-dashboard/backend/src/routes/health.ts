@@ -5,9 +5,9 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { asyncHandler } from '@/middleware/errorHandler';
-import { healthCheckService, HealthStatus } from '@/services/healthCheck';
-import { auditLogger } from '@/security/auditLogger';
+import { asyncHandler } from '../middleware/errorHandler';
+import { healthCheckService, HealthStatus } from '../services/healthCheck';
+import { auditLogger } from '../security/auditLogger';
 
 const router = Router();
 

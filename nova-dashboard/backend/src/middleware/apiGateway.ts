@@ -12,8 +12,8 @@
 import { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 import axios, { AxiosResponse } from 'axios';
-import { logger } from '@/utils/logger';
-import { auditLogger } from '@/security/auditLogger';
+import { logger } from '../utils/logger';
+import { auditLogger } from '../security/auditLogger';
 
 // Service registry with health status
 interface ServiceEndpoint {
