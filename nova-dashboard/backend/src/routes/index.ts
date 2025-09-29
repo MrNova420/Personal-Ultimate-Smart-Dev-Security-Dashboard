@@ -8,6 +8,7 @@ import cryptoRoutes from './crypto';
 import gatewayRoutes from './gateway';
 import messagingRoutes from './messaging';
 import healthRoutes from './health';
+import loggingRoutes from './logging';
 
 /**
  * NovaShield API Routes
@@ -27,6 +28,7 @@ router.get('/', (req, res) => {
     gateway: 'Enabled with microservices routing',
     messaging: 'Enabled with inter-service communication',
     healthChecks: 'Enabled with comprehensive service discovery',
+    distributedLogging: 'Enabled with real-time monitoring and alerting',
     endpoints: {
       auth: '/api/auth',
       crypto: '/api/crypto',
@@ -36,7 +38,8 @@ router.get('/', (req, res) => {
       development: '/api/development',
       gateway: '/api/gateway',
       messaging: '/api/messaging',
-      health: '/api/health'
+      health: '/api/health',
+      logging: '/api/logging'
     },
     microservices: {
       'security-engine': '/api/gateway/security-engine',
@@ -48,7 +51,10 @@ router.get('/', (req, res) => {
       ready: '/api/health/ready',
       live: '/api/health/live',
       services: '/api/health/services',
-      registry: '/api/health/registry'
+      registry: '/api/health/registry',
+      logs: '/api/logging/logs',
+      metrics: '/api/logging/metrics',
+      logStream: '/api/logging/stream'
     },
     documentation: '/api/docs',
     status: 'operational',
@@ -63,8 +69,9 @@ router.use('/health', healthRoutes);
 // Mount API Gateway routes (highest priority for routing)
 router.use('/gateway', gatewayRoutes);
 
-// Mount message queue routes
+// Mount messaging and logging routes
 router.use('/messaging', messagingRoutes);
+router.use('/logging', loggingRoutes);
 
 // Mount local service routes
 router.use('/auth', authRoutes);

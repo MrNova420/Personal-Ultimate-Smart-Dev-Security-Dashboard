@@ -15,6 +15,7 @@ import { securityMonitor } from '@/security/securityMonitor';
 import { auditLogger } from '@/security/auditLogger';
 import { messageQueue } from '@/messaging/messageQueue';
 import { healthCheckService } from '@/services/healthCheck';
+import { distributedLoggingService } from '@/services/distributedLogging';
 import routes from '@/routes';
 
 // Load environment variables
@@ -46,6 +47,7 @@ class NovaShieldServer {
     this.initializeSecurityMonitoring();
     this.initializeMessageQueue();
     this.initializeHealthChecks();
+    this.initializeDistributedLogging();
     this.createServer();
   }
 
@@ -489,6 +491,71 @@ class NovaShieldServer {
     healthCheckService.start();
 
     logger.info('🏥 Health Check and Service Discovery system initialized');
+  }
+
+  /**
+   * Initialize distributed logging and monitoring system
+   */
+  private initializeDistributedLogging(): void {
+    // Set up distributed logging event listeners
+    distributedLoggingService.on('alert', async (alertData) => {
+      logger.warn('🚨 Distributed logging alert triggered', {
+        ruleId: alertData.rule.id,
+        ruleName: alertData.rule.name,
+        severity: alertData.rule.severity
+      });
+
+      // Log high-severity alerts to audit system
+      if (alertData.rule.severity === 'critical' || alertData.rule.severity === 'high') {
+        await auditLogger.logSecurityEvent(
+          'system',
+          alertData.rule.severity === 'critical' ? 'critical' : 'high',
+          'distributed_logging_alert',
+          {
+            ruleId: alertData.rule.id,
+            ruleName: alertData.rule.name,
+            severity: alertData.rule.severity,
+            payload: alertData.payload
+          },
+          {
+            ipAddress: '127.0.0.1',
+            outcome: 'failure'
+          }
+        );
+      }
+    });
+
+    distributedLoggingService.on('metricAlert', async (alertData) => {
+      logger.warn('📊 Metric alert triggered', {
+        ruleId: alertData.rule.id,
+        ruleName: alertData.rule.name,
+        metricName: alertData.metric.metricName,
+        value: alertData.metric.value
+      });
+    });
+
+    // Start the distributed logging service
+    distributedLoggingService.start();
+
+    // Log system startup events
+    distributedLoggingService.logEntry({
+      level: 'info',
+      category: 'system',
+      service: 'backend',
+      message: 'NovaShield backend server starting up',
+      correlationId: `startup_${Date.now()}`,
+      metadata: {
+        environment: process.env.NODE_ENV || 'development',
+        nodeVersion: process.version,
+        platform: process.platform,
+        architecture: process.arch
+      },
+      tags: ['startup', 'system', 'backend'],
+      environment: process.env.NODE_ENV || 'development',
+      version: '1.0.0'
+    });
+
+    logger.info('📊 Distributed Logging and Monitoring system initialized');
   }
 
   /**
