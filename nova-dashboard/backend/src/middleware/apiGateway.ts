@@ -12,8 +12,8 @@
 import { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 import axios, { AxiosResponse } from 'axios';
-import { logger } from '@/utils/logger';
-import { auditLogger } from '@/security/auditLogger';
+import { logger } from '../utils/logger';
+import { auditLogger } from '../security/auditLogger';
 
 // Service registry with health status
 interface ServiceEndpoint {
@@ -104,7 +104,7 @@ class APIGateway {
           service.errorCount++;
           
           logger.warn(`❌ Health check failed for ${name}`, { 
-            error: error.message,
+            error: error instanceof Error ? error.message : String(error),
             errorCount: service.errorCount
           });
         }
@@ -180,7 +180,7 @@ class APIGateway {
       }
       
       logger.error(`🚨 Gateway routing error for ${serviceName}`, {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         method: req.method,
         path: req.path
       });
@@ -190,7 +190,7 @@ class APIGateway {
         'high',
         `gateway_error_${serviceName}`,
         {
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
           method: req.method,
           path: req.path
         },
@@ -205,7 +205,7 @@ class APIGateway {
 
       this.sendError(res, 502, 'Gateway error', { 
         serviceName, 
-        error: error.message 
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -324,7 +324,7 @@ export const apiGateway = new APIGateway();
  * Enhanced rate limiting middleware for different service types
  */
 export const createServiceRateLimit = (serviceName: string) => {
-  const limits = {
+  const limits: { [key: string]: { windowMs: number; max: number } } = {
     'security-engine': { windowMs: 5 * 60 * 1000, max: 50 }, // 50 requests per 5 minutes
     'terminal-service': { windowMs: 1 * 60 * 1000, max: 30 }, // 30 requests per minute
     'monitoring-service': { windowMs: 1 * 60 * 1000, max: 100 }, // 100 requests per minute
@@ -343,7 +343,7 @@ export const createServiceRateLimit = (serviceName: string) => {
     },
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => {
+    keyGenerator: (req: any) => {
       // Create unique key combining IP, user ID, and service
       return `${req.ip}:${req.user?.id || 'anonymous'}:${serviceName}`;
     }
@@ -358,7 +358,10 @@ export const gatewayMiddleware = (serviceName: string) => {
     try {
       await apiGateway.routeRequest(serviceName, req, res);
     } catch (error) {
-      logger.error('🚨 Gateway middleware error', { error: error.message, serviceName });
+      logger.error('🚨 Gateway middleware error', { 
+        error: error instanceof Error ? error.message : String(error), 
+        serviceName 
+      });
       res.status(500).json({
         error: 'Internal gateway error',
         service: serviceName,

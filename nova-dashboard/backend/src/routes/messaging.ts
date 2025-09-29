@@ -5,9 +5,9 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { asyncHandler } from '@/middleware/errorHandler';
-import { messageQueue, MessageTypes } from '@/messaging/messageQueue';
-import { auditLogger } from '@/security/auditLogger';
+import { asyncHandler } from '../middleware/errorHandler';
+import { messageQueue, MessageTypes } from '../messaging/messageQueue';
+import { auditLogger } from '../security/auditLogger';
 
 const router = Router();
 

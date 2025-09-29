@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { logger, logError, logSecurity } from '@/utils/logger';
+import { logger, logError, logSecurity } from '../utils/logger';
 
 /**
  * NovaShield Error Handling Middleware

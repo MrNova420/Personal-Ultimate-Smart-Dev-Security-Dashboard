@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { asyncHandler } from '@/middleware/errorHandler';
-import { auditLogger, logSecurityViolation } from '@/security/auditLogger';
-import { securityMonitor } from '@/security/securityMonitor';
+import { asyncHandler } from '../middleware/errorHandler';
+import { auditLogger, logSecurityViolation } from '../security/auditLogger';
+import { securityMonitor } from '../security/securityMonitor';
 
 const router = Router();
 

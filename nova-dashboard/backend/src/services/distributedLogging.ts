@@ -13,10 +13,10 @@
  */
 
 import { EventEmitter } from 'events';
-import { logger } from '@/utils/logger';
-import { auditLogger } from '@/security/auditLogger';
-import { messageQueue, MessageTypes } from '@/messaging/messageQueue';
-import { healthCheckService } from '@/services/healthCheck';
+import { logger } from '../utils/logger';
+import { auditLogger } from '../security/auditLogger';
+import { messageQueue, MessageTypes } from '../messaging/messageQueue';
+import { healthCheckService } from '../services/healthCheck';
 
 // Log levels and types
 export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';

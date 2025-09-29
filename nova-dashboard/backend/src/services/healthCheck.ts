@@ -11,9 +11,9 @@
  */
 
 import { EventEmitter } from 'events';
-import { logger } from '@/utils/logger';
-import { auditLogger } from '@/security/auditLogger';
-import { messageQueue, MessageTypes } from '@/messaging/messageQueue';
+import { logger } from '../utils/logger';
+import { auditLogger } from '../security/auditLogger';
+import { messageQueue, MessageTypes } from '../messaging/messageQueue';
 
 // Health check status types
 export type HealthStatus = 'healthy' | 'unhealthy' | 'degraded' | 'unknown';

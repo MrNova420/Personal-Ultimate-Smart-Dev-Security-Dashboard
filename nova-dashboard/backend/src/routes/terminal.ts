@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { asyncHandler } from '@/middleware/errorHandler';
+import { asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
 

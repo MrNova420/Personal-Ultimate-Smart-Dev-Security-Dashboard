@@ -1,7 +1,8 @@
-import fs from 'fs/promises';
-import path from 'path';
+// Temporary Node.js module stubs for TypeScript compilation
+import { promises as fs } from 'fs';
+import * as path from 'path';
 import { quantumCrypto, QuantumKeyPair, cryptoUtils } from './quantumCrypto';
-import { logger } from '@/utils/logger';
+import { logger } from '../utils/logger';
 
 /**
  * NovaShield Secure Key Management System
