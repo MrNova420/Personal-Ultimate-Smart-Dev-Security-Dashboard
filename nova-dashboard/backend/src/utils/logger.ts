@@ -43,8 +43,9 @@ const basicLogger: Logger = {
 export const logger = basicLogger;
 
 // Export commonly used functions that match winston API
-export const logError = (message: string, error: any) => {
-  basicLogger.error(message, error);
+export const logError = (error: any, context?: string, meta?: any) => {
+  const message = context ? `${context}: ${error.message || error}` : String(error.message || error);
+  basicLogger.error(message, meta || '');
 };
 
 export const logWarning = (message: string, data?: any) => {

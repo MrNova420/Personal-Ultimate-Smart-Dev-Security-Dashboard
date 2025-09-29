@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { asyncHandler } from '../middleware/errorHandler';
 import { quantumCrypto } from '../security/quantumCrypto';
 import { keyManager } from '../security/keyManager';
@@ -14,7 +14,7 @@ import { logger } from '../utils/logger';
 const router = Router();
 
 // Get cryptographic system information
-router.get('/info', asyncHandler(async (req, res) => {
+router.get('/info', asyncHandler(async (req: Request, res: Response) => {
   const cryptoInfo = quantumCrypto.getCryptoInfo();
   const keyStats = keyManager.getStatistics();
   
@@ -30,7 +30,7 @@ router.get('/info', asyncHandler(async (req, res) => {
 }));
 
 // Generate a secure token
-router.post('/token', asyncHandler(async (req, res) => {
+router.post('/token', asyncHandler(async (req: Request, res: Response) => {
   const { length = 32 } = req.body;
   
   if (length < 16 || length > 128) {
@@ -59,7 +59,7 @@ router.post('/token', asyncHandler(async (req, res) => {
 }));
 
 // Generate quantum-resistant hash
-router.post('/hash', asyncHandler(async (req, res) => {
+router.post('/hash', asyncHandler(async (req: Request, res: Response) => {
   const { data } = req.body;
   
   if (!data) {
@@ -90,7 +90,7 @@ router.post('/hash', asyncHandler(async (req, res) => {
 // Key Management Routes
 
 // List public keys
-router.get('/keys/public', asyncHandler(async (req, res) => {
+router.get('/keys/public', asyncHandler(async (req: Request, res: Response) => {
   const publicKeys = keyManager.exportPublicKeys();
   
   res.json({
@@ -103,7 +103,7 @@ router.get('/keys/public', asyncHandler(async (req, res) => {
 }));
 
 // Generate new key pair
-router.post('/keys/generate', asyncHandler(async (req, res) => {
+router.post('/keys/generate', asyncHandler(async (req: Request, res: Response) => {
   const { keyId, purpose, tags } = req.body;
   
   if (!keyId || !purpose) {

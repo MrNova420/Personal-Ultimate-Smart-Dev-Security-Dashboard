@@ -47,7 +47,7 @@ declare class EventEmitter {
   removeAllListeners(eventName?: string): this;
 }
 
-// Basic Express types
+// Basic Express types - Enhanced for better compilation
 declare module 'express' {
   export interface Request {
     method: string;
@@ -73,14 +73,18 @@ declare module 'express' {
   }
   
   export interface Router {
-    get(path: string, ...handlers: any[]): Router;
-    post(path: string, ...handlers: any[]): Router;
-    put(path: string, ...handlers: any[]): Router;
-    delete(path: string, ...handlers: any[]): Router;
+    get(path: string, ...handlers: Array<(req: Request, res: Response, next?: NextFunction) => any>): Router;
+    post(path: string, ...handlers: Array<(req: Request, res: Response, next?: NextFunction) => any>): Router;
+    put(path: string, ...handlers: Array<(req: Request, res: Response, next?: NextFunction) => any>): Router;
+    delete(path: string, ...handlers: Array<(req: Request, res: Response, next?: NextFunction) => any>): Router;
     use(...args: any[]): Router;
   }
   
   export function Router(): Router;
+  
+  // Default express function
+  function express(): any;
+  export default express;
 }
 
 // Basic crypto module
