@@ -8,10 +8,10 @@ redis==4.5.4
 celery==5.2.7
 
 # Security & Cryptography
-cryptography==40.0.1
-pycryptodome==3.17.0
+cryptography==40.0.2
+pycryptodome==3.23.0
 argon2-cffi==21.3.0
-bcrypt==4.0.1
+bcrypt==4.3.0
 
 # Network Security
 scapy==2.5.0
